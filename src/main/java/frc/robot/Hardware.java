@@ -19,4 +19,7 @@ public class Hardware {
     new Limelight("left", LimelightState.TAGS, LimelightModel.FOUR);
   public final Limelight rightLimelight =
     new Limelight("right", LimelightState.TAGS, LimelightModel.FOUR);
+
+  public final TalonFX intakeRollerMotor = new TalonFX(31);
+  public final TalonFX intakePivotMotor = new TalonFX(32);
 }

@@ -4,6 +4,7 @@ import com.ctre.phoenix6.Utils;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -66,6 +67,11 @@ public class LocalizationSubsystem extends StateMachine<LocalizationState> {
 
   public Pose2d getLookaheadPose(double lookahead) {
     return MathHelpers.poseLookahead(getPose(), swerve.getFieldRelativeSpeeds(), lookahead);
+  }
+
+  /** Expose the drivetrain field-relative speeds (vx, vy, omega). */
+  public ChassisSpeeds getFieldRelativeSpeeds() {
+    return swerve.getFieldRelativeSpeeds();
   }
 
   @Override

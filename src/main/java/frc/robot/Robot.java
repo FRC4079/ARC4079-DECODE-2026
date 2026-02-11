@@ -14,8 +14,12 @@ import frc.robot.AutoMovements.HeadingLock;
 import frc.robot.AutoMovements.OutpostSetpoint;
 import frc.robot.FlywheelSubsystem.DistanceCalc;
 import frc.robot.FlywheelSubsystem.LookupTable;
+import frc.robot.Intake.IntakePosition;
+import frc.robot.Intake.intaker;
 import frc.robot.FlywheelSubsystem.Flywheel;
 import frc.robot.FlywheelSubsystem.Hood;
+import frc.robot.FlywheelSubsystem.FlywheelStateMachine;
+import frc.robot.FlywheelSubsystem.HoodStateMachine;
 import frc.robot.autos.AutoPoint;
 import frc.robot.autos.AutoSegment;
 import frc.robot.autos.Points;
@@ -42,9 +46,13 @@ public class Robot extends TimedRobot {
   private final HeadingLock headingLock = new HeadingLock(localization, swerve);
   private final OutpostSetpoint outpost = new OutpostSetpoint(localization, trailblazer);
   private final DistanceCalc distanceCalc = new DistanceCalc(localization, headingLock);
-  private final Flywheel flywheel = new Flywheel(hardware.flywheelA1, hardware.flywheelA2, hardware.flywheelB1, hardware.flywheelB2);
+  private final Flywheel flywheel = new Flywheel(hardware.flywheelA1, hardware.flywheelA2);
   private final Hood hood = new Hood(hardware.hoodMotor);
   private final LookupTable turretLookup = new LookupTable(distanceCalc, flywheel, hood);
+  private final intaker intakeRoller = new intaker(hardware.intakeRollerMotor);
+  private final IntakePosition intakePosition = new IntakePosition(hardware.intakePivotMotor);
+  private final FlywheelStateMachine flywheelSM = new FlywheelStateMachine(flywheel);
+  private final HoodStateMachine hoodSM = new HoodStateMachine(hood);
   private final phaseTimer phaseTimer = new phaseTimer();
   
   public Robot() {
@@ -158,5 +166,31 @@ public class Robot extends TimedRobot {
       edu.wpi.first.wpilibj2.command.Commands.runOnce(headingLock::enableForAlliance));
 
   hardware.driverController.x().onTrue(outpost.travelToOutpost());
+
+  // Intake roller controls
+  hardware.driverController.a().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakeRoller.intake()));
+  hardware.driverController.b().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakeRoller.stop()));
+  hardware.driverController.leftBumper().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakeRoller.reverse()));
+  hardware.driverController.rightBumper().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakeRoller.feed()));
+  // Simple hood/flywheel demo controls (preset RPM and angles)
+  hardware.driverController.rightTrigger().onTrue(
+    edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> flywheelSM.requestRpm(3500)));
+  hardware.driverController.leftTrigger().onTrue(
+    edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> flywheelSM.requestOff()));
+
+  hardware.driverController.start().onTrue(
+    edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> hoodSM.requestDegrees(20)));
+  hardware.driverController.back().onTrue(
+    edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> hoodSM.requestDegrees(35)));
+
+  // Intake position controls (POV/D-pad)
+  hardware.driverController.povUp().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakePosition.requestUp()))
+  ;
+  hardware.driverController.povDown().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakePosition.requestDown()))
+  ;
+  hardware.driverController.povLeft().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakePosition.off()))
+  ;
+  hardware.driverController.povRight().onTrue(edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> intakePosition.off()))
+  ;
   }
 }

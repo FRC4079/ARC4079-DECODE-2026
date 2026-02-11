@@ -1,7 +1,7 @@
 package frc.robot.FlywheelSubsystem;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.AutoMovements.HeadingLock;
 import frc.robot.fms.FmsSubsystem;
 import frc.robot.localization.LocalizationSubsystem;
@@ -24,6 +24,57 @@ public class DistanceCalc extends LifecycleSubsystem {
     Pose2d current = localization.getPose();
     Pose2d target = FmsSubsystem.isRedAlliance() ? headingLock.getRedTargetPose() : headingLock.getBlueTargetPose();
     return current.getTranslation().getDistance(target.getTranslation());
+  }
+
+
+  public double getRobotVelocityTowardTargetMetersPerSec() {
+    Pose2d current = localization.getPose();
+    Pose2d target = FmsSubsystem.isRedAlliance() ? headingLock.getRedTargetPose() : headingLock.getBlueTargetPose();
+
+    double dx = target.getX() - current.getX();
+    double dy = target.getY() - current.getY();
+    double norm = Math.hypot(dx, dy);
+    if (norm < 1e-6) {
+      return 0.0;
+    }
+
+    ChassisSpeeds fieldSpeeds = localization.getFieldRelativeSpeeds();
+    double vx = fieldSpeeds.vxMetersPerSecond;
+    double vy = fieldSpeeds.vyMetersPerSecond;
+
+    double ux = dx / norm;
+    double uy = dy / norm;
+
+    return vx * ux + vy * uy;
+  }
+
+
+  public double getRobotLateralVelocityMetersPerSec() {
+    Pose2d current = localization.getPose();
+    Pose2d target = FmsSubsystem.isRedAlliance() ? headingLock.getRedTargetPose() : headingLock.getBlueTargetPose();
+
+    double dx = target.getX() - current.getX();
+    double dy = target.getY() - current.getY();
+    double norm = Math.hypot(dx, dy);
+    if (norm < 1e-6) {
+      return 0.0;
+    }
+
+    ChassisSpeeds fieldSpeeds = localization.getFieldRelativeSpeeds();
+    double vx = fieldSpeeds.vxMetersPerSecond;
+    double vy = fieldSpeeds.vyMetersPerSecond;
+
+    double ux = dx / norm;
+    double uy = dy / norm;
+    double px = -uy;
+    double py = ux;
+
+    return vx * px + vy * py;
+  }
+
+
+  public double getRobotAngularVelocityRadPerSec() {
+    return localization.getFieldRelativeSpeeds().omegaRadiansPerSecond;
   }
 
   @Override
