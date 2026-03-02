@@ -24,6 +24,10 @@ public class VisionSubsystem extends StateMachine<VisionState> {
 
   private double robotHeading;
   private double angularVelocity;
+  private double pitch;
+  private double pitchRate;
+  private double roll;
+  private double rollRate;
 
   private boolean hasSeenTag = false;
   private boolean seeingTag = false;
@@ -40,6 +44,11 @@ public class VisionSubsystem extends StateMachine<VisionState> {
   @Override
   protected void collectInputs() {
     angularVelocity = imu.getRobotAngularVelocity();
+    robotHeading = imu.getRobotHeading(); // keep MT2 seeded with real Pigeon heading
+    pitch = imu.getPitch();
+    pitchRate = imu.getPitchRate();
+    roll = imu.getRoll();
+    rollRate = imu.getRollRate();
 
     leftTagResult = leftLimelight.getTagResult();
     rightTagResult = rightLimelight.getTagResult();
@@ -101,8 +110,8 @@ public class VisionSubsystem extends StateMachine<VisionState> {
   public void robotPeriodic() {
     super.robotPeriodic();
 
-    leftLimelight.sendImuData(robotHeading, angularVelocity, 0.0, 0.0, 0.0, 0.0);
-    rightLimelight.sendImuData(robotHeading, angularVelocity, 0.0, 0.0, 0.0, 0.0);
+    leftLimelight.sendImuData(robotHeading, angularVelocity, pitch, pitchRate, roll, rollRate);
+    rightLimelight.sendImuData(robotHeading, angularVelocity, pitch, pitchRate, roll, rollRate);
 
   }
 

@@ -81,10 +81,16 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.distanceCalc = distanceCalc;
         this.flywheel     = flywheel;
         this.hood         = hood;
+
 // do your job here
-        addShotPoint(new ShotPoint(1.0, 6700, 0));
-        
-        addTofPoint(1.0, 0.90);
+        addShotPoint(new ShotPoint(2.8, 3200, 0));
+        addShotPoint(new ShotPoint(3.2, 3300, 0));
+        addShotPoint(new ShotPoint(3.6, 3450, 0));
+        addShotPoint(new ShotPoint(4, 3600, 0));
+        addShotPoint(new ShotPoint(5.1, 4000, 0));
+
+
+        addTofPoint(7.83, 1.2);
     }
 
     public void addShotPoint(ShotPoint p) {

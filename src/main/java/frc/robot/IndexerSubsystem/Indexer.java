@@ -8,8 +8,8 @@ import frc.robot.util.state_machines.StateMachine;
 public class Indexer extends StateMachine<Indexer.IndexerState> {
   public enum IndexerState { OFF, INTAKE, FEED, REVERSE }
 
-  public static final double INTAKE_POWER = 0.6;
-  public static final double FEED_POWER = 0.4;
+  public static final double INTAKE_POWER = 1;
+  public static final double FEED_POWER = 1;
   public static final double REVERSE_POWER = -0.5;
 
   private final TalonFX Indexer;

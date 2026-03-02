@@ -26,10 +26,20 @@ public class FlywheelStateMachine extends StateMachine<FlywheelStateMachine.Stat
   protected State getNextState(State current) { return current; }
 
   @Override
+  protected void collectInputs() {
+    // Always publish telemetry regardless of state
+    flywheel.periodicTelemetry();
+
+    if (getState() == State.SPIN_RPM) {
+      flywheel.spinFlywheel(targetRpm);
+    }
+  }
+
+  @Override
   protected void afterTransition(State newState) {
     switch (newState) {
       case OFF -> flywheel.stop();
-      case SPIN_RPM -> flywheel.spinFlywheel(targetRpm);
+      case SPIN_RPM -> flywheel.spinFlywheel(targetRpm); // kick off immediately
     }
   }
 }

@@ -70,7 +70,7 @@ public class TestController {
     this.indexerTargetRpm = 0.0;
     this.hopperTargetRpm = 0.0;
 
-    intakePosition.requestUp();
+    // Do NOT command intakePosition on boot — elevator is already at rest position
 
     bind();
     publishAll();
@@ -141,14 +141,6 @@ public class TestController {
 
     controller.leftTrigger().onTrue(
       edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
-        intakeUpDeg += 1.0;
-        intakePosition.setUpDegrees(intakeUpDeg);
-        if (intakeIsUp) {
-          intakePosition.requestUp();
-        }
-        SmartDashboard.putNumber("Test/Intake/up_deg", intakeUpDeg);
-        SmartDashboard.putBoolean("Test/Intake/is_up", intakeIsUp);
-
         indexerTargetRpm = Math.max(0.0, indexerTargetRpm - 50.0);
         double idxDuty = clamp(indexerTargetRpm / RPM_TO_DUTY_SCALE);
         indexer.setDutyPercent(idxDuty);
@@ -159,14 +151,6 @@ public class TestController {
 
     controller.rightTrigger().onTrue(
       edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
-        intakeUpDeg = Math.max(0.0, intakeUpDeg - 1.0);
-        intakePosition.setUpDegrees(intakeUpDeg);
-        if (intakeIsUp) {
-          intakePosition.requestUp();
-        }
-        SmartDashboard.putNumber("Test/Intake/up_deg", intakeUpDeg);
-        SmartDashboard.putBoolean("Test/Intake/is_up", intakeIsUp);
-
         hopperTargetRpm += 50.0;
         indexerTargetRpm += 50.0;
         double hopDuty = clamp(hopperTargetRpm / RPM_TO_DUTY_SCALE);
@@ -184,9 +168,9 @@ public class TestController {
       edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
         intakeIsUp = !intakeIsUp;
         if (intakeIsUp) {
-          intakePosition.requestUp();
+          intakePosition.retract();
         } else {
-          intakePosition.requestDown();
+          intakePosition.deploy();
         }
         SmartDashboard.putBoolean("Test/Intake/is_up", intakeIsUp);
       })

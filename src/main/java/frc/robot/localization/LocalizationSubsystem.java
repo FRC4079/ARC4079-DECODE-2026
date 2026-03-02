@@ -1,13 +1,11 @@
 package frc.robot.localization;
 
 import com.ctre.phoenix6.Utils;
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.networktables.DoubleArrayPublisher;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -107,25 +105,25 @@ public class LocalizationSubsystem extends StateMachine<LocalizationState> {
     if (!vision.seenTagRecentlyForReset() && FeatureFlags.MT_VISION_METHOD.getAsBoolean()) {
       resetPose(visionPose);
     }
+
+    var poseXYOnly = new Pose2d(
+        visionPose.getTranslation(),
+        swerve.getDrivetrainState().Pose.getRotation());
+
     swerve.drivetrain.addVisionMeasurement(
-        visionPose, Utils.fpgaToCurrentTime(result.timestamp()), result.standardDevs());
+        poseXYOnly, Utils.fpgaToCurrentTime(result.timestamp()), result.standardDevs());
   }
 
-  private void resetGyro(Rotation2d gyroAngle) {
+  public void resetGyro(Rotation2d gyroAngle) {
     imu.setAngle(gyroAngle.getDegrees());
     swerve.drivetrain.resetRotation(gyroAngle);
   }
 
   public void resetPose(Pose2d estimatedPose) {
-    // Reset the gyro when requested in teleop
-    // Otherwise, if we are in auto, only reset it if we aren't already at the correct heading
-    if (DriverStation.isTeleop()
-        || !MathUtil.isNear(
-            estimatedPose.getRotation().getDegrees(), imu.getRobotHeading(), 1.5, -180, 180)) {
-      imu.setAngle(estimatedPose.getRotation().getDegrees());
-    }
-
-    swerve.drivetrain.resetPose(estimatedPose);
+    // Never update the gyro heading from vision — heading is gyro-only.
+    // Only reset the drivetrain pose estimator position.
+    swerve.drivetrain.resetPose(
+        new Pose2d(estimatedPose.getTranslation(), swerve.getDrivetrainState().Pose.getRotation()));
   }
 
   public Command getZeroCommand() {

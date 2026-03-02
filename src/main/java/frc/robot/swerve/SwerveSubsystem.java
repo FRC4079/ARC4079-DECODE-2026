@@ -206,14 +206,27 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   }
 
   private void sendSwerveRequest() {
+    // If auto speeds were set recently (within 100ms), use them even during teleop
+    boolean useAutoSpeeds = !timeSinceAutoSpeeds.hasElapsed(0.1);
+
     switch (getState()) {
-      case TELEOP ->
+      case TELEOP -> {
+        if (useAutoSpeeds) {
+          drivetrain.setControl(
+              drive
+                  .withVelocityX(autoSpeeds.vxMetersPerSecond)
+                  .withVelocityY(autoSpeeds.vyMetersPerSecond)
+                  .withRotationalRate(autoSpeeds.omegaRadiansPerSecond)
+                  .withDriveRequestType(DriveRequestType.Velocity));
+        } else {
           drivetrain.setControl(
               drive
                   .withVelocityX(teleopSpeeds.vxMetersPerSecond)
                   .withVelocityY(teleopSpeeds.vyMetersPerSecond)
                   .withRotationalRate(teleopSpeeds.omegaRadiansPerSecond)
                   .withDriveRequestType(DriveRequestType.OpenLoopVoltage));
+        }
+      }
       case TELEOP_SNAPS -> {
         if (teleopSpeeds.omegaRadiansPerSecond == 0) {
           drivetrain.setControl(

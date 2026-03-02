@@ -3,13 +3,14 @@ package frc.robot.AutoMovements;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import frc.robot.fms.FmsSubsystem;
 import frc.robot.FlywheelSubsystem.LookupTable;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.localization.LocalizationSubsystem;
 import frc.robot.swerve.SwerveSubsystem;
 import frc.robot.util.scheduling.SubsystemPriority;
 import frc.robot.util.state_machines.StateMachine;
+import frc.robot.vision.limelight.LimelightHelpers;
 
 
 public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
@@ -19,7 +20,22 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
 
   private Translation2d redTargetPoint = new Translation2d();
   private Translation2d blueTargetPoint = new Translation2d();
-  private double turretOffsetDegrees = -40.765;  //-38.7
+  private double redTurretOffsetDegrees = 315;
+  private double blueTurretOffsetDegrees = -38;
+
+  private static final String LIMELIGHT_LEFT = "limelight-left";
+  private static final double STATIONARY_SPEED_THRESHOLD = 0.05; // m/s — consider robot "not moving" below this
+  private static final long MT1_CORRECTION_COOLDOWN_MS = 500;
+  private long lastMt1CorrectionTimestamp = 0;
+  private static final double HEADING_TOLERANCE_DEG = 3;
+  private double lastTargetAngleDeg = 0.0;
+  private static final double HEADING_SETTLE_TIME_S = 0.1;
+  private double headingOnTargetStartTime = -1.0;
+
+ 
+  private static final double CLOSE_DISTANCE_M = 1.0;
+  private static final double FAR_DISTANCE_M = 5;
+  private static final double MAX_CORRECTION_DEG = 3.3;
 
   public enum HeadingLockState {
     DISABLED,
@@ -69,8 +85,17 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
     return blueTargetPoint;
   }
 
+  public void setRedTurretOffsetDegrees(double offsetDegrees) {
+    this.redTurretOffsetDegrees = offsetDegrees;
+  }
+
+  public void setBlueTurretOffsetDegrees(double offsetDegrees) {
+    this.blueTurretOffsetDegrees = offsetDegrees;
+  }
+
   public void setTurretOffsetDegrees(double offsetDegrees) {
-    this.turretOffsetDegrees = offsetDegrees;
+    this.redTurretOffsetDegrees = offsetDegrees;
+    this.blueTurretOffsetDegrees = offsetDegrees;
   }
 
   public void enableForAlliance() {
@@ -91,46 +116,142 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
 
   public void disableLock() {
     setStateFromRequest(HeadingLockState.DISABLED);
+    swerve.normalDriveRequest();
   }
 
   @Override
   protected HeadingLockState getNextState(HeadingLockState current) { return current; }
 
   @Override
-  public void robotPeriodic() {
-    super.robotPeriodic();
-
+  protected void collectInputs() {
+    var robotTranslation = localization.getPose().getTranslation();
+    SmartDashboard.putNumber("HeadingLock/DistToRed_m",
+        robotTranslation.getDistance(redTargetPoint));
+    SmartDashboard.putNumber("HeadingLock/DistToBlue_m",
+        robotTranslation.getDistance(blueTargetPoint));
+    checkAndCorrectHeadingWithMT1();
     switch (getState()) {
-      case RED_LOCK -> faceTarget(redTargetPoint);
-      case BLUE_LOCK -> faceTarget(blueTargetPoint);
-      case DISABLED -> {
-      }
+      case RED_LOCK -> faceTargetPoseBased(redTargetPoint, redTurretOffsetDegrees);
+      case BLUE_LOCK -> faceTargetPoseBased(blueTargetPoint, blueTurretOffsetDegrees);
+      case DISABLED -> {}
     }
   }
 
-  private void faceTarget(Translation2d targetPoint) {
+  private void checkAndCorrectHeadingWithMT1() {
+    // Cooldown: don't correct more often than every 500ms
+    long now = System.currentTimeMillis();
+    if (now - lastMt1CorrectionTimestamp < MT1_CORRECTION_COOLDOWN_MS) {
+      return;
+    }
+
+    // Only correct when robot is stationary
+    var speeds = swerve.getRobotRelativeSpeeds();
+    double linearSpeed = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    if (linearSpeed > STATIONARY_SPEED_THRESHOLD) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "MOVING");
+      return;
+    }
+
+    // Check left limelight only
+    var mt1Estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(LIMELIGHT_LEFT);
+
+    if (mt1Estimate == null || mt1Estimate.tagCount < 2) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", mt1Estimate == null ? "NO_DATA" : "NEED_2_TAGS");
+      return;
+    }
+
+    double mt1HeadingDeg = mt1Estimate.pose.getRotation().getDegrees();
+    double ourHeadingDeg = localization.getPose().getRotation().getDegrees();
+    double diff = Math.abs(mt1HeadingDeg - ourHeadingDeg);
+    if (diff > 180) diff = 360 - diff;
+
+    SmartDashboard.putNumber("HeadingLock/MT1_HeadingDeg", mt1HeadingDeg);
+    SmartDashboard.putNumber("HeadingLock/OurHeadingDeg", ourHeadingDeg);
+    SmartDashboard.putNumber("HeadingLock/HeadingDiffDeg", diff);
+
+    SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", true);
+    SmartDashboard.putString("HeadingLock/MT1_Status", "CORRECTING");
+    localization.resetGyro(Rotation2d.fromDegrees(mt1HeadingDeg));
+    lastMt1CorrectionTimestamp = now;
+  }
+
+  @Override
+  public void robotPeriodic() {
+    super.robotPeriodic();
+  }
+
+  private void faceTargetPoseBased(Translation2d targetPoint, double offsetDegrees) {
     var robotPose = localization.getPose();
     double dx = targetPoint.getX() - robotPose.getX();
     double dy = targetPoint.getY() - robotPose.getY();
 
-    double norm = Math.hypot(dx, dy);
-    if (norm < 1e-6) {
+    double distance = Math.hypot(dx, dy);
+    if (distance < 1e-6) {
       return;
     }
 
-    double tofSeconds = (lookupTable != null) ? lookupTable.getTimeOfFlightSeconds(norm) : 1.0;
+    // Add a small correction toward 180° as distance increases (max ~3 deg)
+    double t = Math.max(0.0, Math.min(1.0, (distance - CLOSE_DISTANCE_M) / (FAR_DISTANCE_M - CLOSE_DISTANCE_M)));
+    double correctionDeg = t * MAX_CORRECTION_DEG;
 
-    ChassisSpeeds fieldSpeeds = localization.getFieldRelativeSpeeds();
-    double vx = fieldSpeeds.vxMetersPerSecond;
-    double vy = fieldSpeeds.vyMetersPerSecond;
+    double angleDegrees = Math.toDegrees(Math.atan2(dy, dx));
+    double rawFinalAngle = angleDegrees + offsetDegrees;
 
-    var lookahead = robotPose.getTranslation().plus(new Translation2d(vx * tofSeconds, vy * tofSeconds));
+    // Determine which direction to nudge toward 180°
+    // Normalize to [-180, 180] to figure out the shortest path to 180
+    double diff = 180.0 - rawFinalAngle;
+    // Normalize diff to [-180, 180]
+    diff = ((diff + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    double sign = Math.signum(diff);
 
-    double dxComp = targetPoint.getX() - lookahead.getX();
-    double dyComp = targetPoint.getY() - lookahead.getY();
+    double finalAngle = rawFinalAngle + sign * correctionDeg;
 
-    double angleDegrees = Math.toDegrees(Math.atan2(dyComp, dxComp));
-    swerve.snapsDriveRequest(angleDegrees + turretOffsetDegrees);
-}
+    SmartDashboard.putNumber("HeadingLock/TargetAngleDeg", finalAngle);
+    SmartDashboard.putNumber("HeadingLock/OffsetDeg", offsetDegrees);
+    SmartDashboard.putNumber("HeadingLock/CorrectionDeg", sign * correctionDeg);
+    SmartDashboard.putNumber("HeadingLock/DistanceM", distance);
+
+    lastTargetAngleDeg = finalAngle;
+    swerve.snapsDriveRequest(finalAngle);
+  }
+
+  /** Returns true if the robot heading is within tolerance of the heading lock target. */
+  public boolean isOnTarget() {
+    if (getState() == HeadingLockState.DISABLED) return false;
+    double currentDeg = localization.getPose().getRotation().getDegrees();
+    double error = lastTargetAngleDeg - currentDeg;
+    // Normalize to [-180, 180]
+    error = ((error + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    boolean onTarget = Math.abs(error) <= HEADING_TOLERANCE_DEG;
+    SmartDashboard.putBoolean("HeadingLock/OnTarget", onTarget);
+    SmartDashboard.putNumber("HeadingLock/HeadingErrorDeg", error);
+
+    double now = edu.wpi.first.wpilibj.Timer.getFPGATimestamp();
+    if (onTarget) {
+      if (headingOnTargetStartTime < 0) {
+        headingOnTargetStartTime = now;
+      }
+    } else {
+      headingOnTargetStartTime = -1.0;
+    }
+
+    return onTarget;
+  }
+
+  /** Returns true if heading has been on target continuously for the settle time (1s). */
+  public boolean isSettled() {
+    boolean onTarget = isOnTarget();
+    if (!onTarget || headingOnTargetStartTime < 0) {
+      SmartDashboard.putBoolean("HeadingLock/Settled", false);
+      return false;
+    }
+    double elapsed = edu.wpi.first.wpilibj.Timer.getFPGATimestamp() - headingOnTargetStartTime;
+    boolean settled = elapsed >= HEADING_SETTLE_TIME_S;
+    SmartDashboard.putBoolean("HeadingLock/Settled", settled);
+    SmartDashboard.putNumber("HeadingLock/SettleElapsedS", elapsed);
+    return settled;
+  }
 
 }

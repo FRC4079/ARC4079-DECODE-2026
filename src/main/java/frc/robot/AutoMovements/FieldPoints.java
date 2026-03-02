@@ -25,12 +25,12 @@ public final class FieldPoints {
  // private static Pose2d BC2 = new Pose2d(2.0, 1.0, Rotation2d.kZero);
 
   // points for heading lock
-  private static Translation2d HEADINGLOCK_RED_POINT = new Translation2d(4.622, 4.035);
-  private static Translation2d HEADINGLOCK_BLUE_POINT = new Translation2d(11.918, 4.028);
+  private static Translation2d HEADINGLOCK_BLUE_POINT = new Translation2d(4.622, 4.035);
+  private static Translation2d HEADINGLOCK_RED_POINT = new Translation2d(12, 4);
   
   // outpost poses
-  private static Pose2d OUTPOST_RED = new Pose2d(0.766, 0.433, Rotation2d.fromDegrees(0));
-  private static Pose2d OUTPOST_BLUE = new Pose2d(16.14, 7.291, Rotation2d.fromDegrees(180.0));
+  private static Pose2d OUTPOST_BLUE = new Pose2d(0.766, 0.433, Rotation2d.fromDegrees(0));
+  private static Pose2d OUTPOST_RED = new Pose2d(16.14, 7.291, Rotation2d.fromDegrees(180.0));
 
   // getter stuff
   public static Pose2d getRA1() { return RA1; }

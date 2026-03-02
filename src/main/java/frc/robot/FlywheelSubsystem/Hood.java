@@ -4,6 +4,7 @@ import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.MotionMagicConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -47,6 +48,16 @@ public class Hood {
 	public void hold() {
 		double currentRot = motor.getPosition().getValueAsDouble();
 		motor.setControl(mmRequest.withPosition(currentRot));
+	}
+
+	/** Drive the hood motor at an open-loop duty cycle (-1.0 to 1.0). */
+	public void runDutyCycle(double percent) {
+		motor.setControl(new DutyCycleOut(-percent));
+	}
+
+	/** Coast / stop the hood motor with no active control. */
+	public void stopMotor() {
+		motor.setControl(new DutyCycleOut(0.0));
 	}
 
 	public double getAngleDegrees() {
