@@ -1,16 +1,11 @@
 package frc.robot.AutoMovements;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.Supplier;
@@ -18,176 +13,116 @@ import frc.robot.localization.LocalizationSubsystem;
 import frc.robot.swerve.SwerveSubsystem;
 
 public class DriveToPose extends Command {
-  private static final double LOOP_PERIOD_SECS = 0.02;
+  private static final double MAX_SPEED = 3.0; 
+  private static final double DRIVE_TOLERANCE = 0.1; 
+  private static final double THETA_TOLERANCE = 5.0; 
 
-  private static double drivekP = 1.8;
-  private static double drivekD = 0.0;
-  private static double thetakP = 5.0;
-  private static double thetakD = 0.5;
+  private static final double PHASE_TRANSITION_Y_TOLERANCE = 0.4; 
+  private static final double PHASE_TRANSITION_THETA_TOLERANCE = 15.0; 
 
-  private static double driveMaxVelocity = 4.0;
-  private static double driveMaxAcceleration = 3.5;
-  private static double thetaMaxVelocity = Units.degreesToRadians(500.0);
-  private static double thetaMaxAcceleration = 8.0;
-
-  private static double driveTolerance = 0.01;
-  private static double thetaTolerance = Units.degreesToRadians(1.0);
+  private enum Phase { Y_AND_HEADING, ALL }
 
   private final SwerveSubsystem swerve;
   private final LocalizationSubsystem localization;
-  private final Supplier<Pose2d> target;
+  private final Supplier<Pose2d> targetSupplier;
+  private final PIDController xController = new PIDController(2.0, 0.0, 0.0);
+  private final PIDController yController = new PIDController(2.0, 0.0, 0.0);
+  private final PIDController thetaController = new PIDController(4.0, 0.0, 0.1);
 
-  private TrapezoidProfile driveProfile;
-  private final PIDController driveController =
-      new PIDController(0.0, 0.0, 0.0, LOOP_PERIOD_SECS);
-  private final ProfiledPIDController thetaController =
-      new ProfiledPIDController(
-          0.0, 0.0, 0.0, new TrapezoidProfile.Constraints(0.0, 0.0), LOOP_PERIOD_SECS);
-
-  private Translation2d lastSetpointTranslation = Translation2d.kZero;
-  private Translation2d lastSetpointVelocity = Translation2d.kZero;
-  private Rotation2d lastGoalRotation = Rotation2d.kZero;
-  private double lastTime = 0.0;
-  private double driveErrorAbs = 0.0;
-  private double thetaErrorAbs = 0.0;
-  private boolean running = false;
-
-  static {
-    SmartDashboard.putNumber("DriveToPose/DrivekP", drivekP);
-    SmartDashboard.putNumber("DriveToPose/DrivekD", drivekD);
-    SmartDashboard.putNumber("DriveToPose/ThetakP", thetakP);
-    SmartDashboard.putNumber("DriveToPose/ThetakD", thetakD);
-    SmartDashboard.putNumber("DriveToPose/DriveMaxVelocity", driveMaxVelocity);
-    SmartDashboard.putNumber("DriveToPose/DriveMaxAcceleration", driveMaxAcceleration);
-    SmartDashboard.putNumber("DriveToPose/DriveTolerance", driveTolerance);
-    SmartDashboard.putNumber("DriveToPose/ThetaToleranceDeg", Math.toDegrees(thetaTolerance));
-  }
+  private Pose2d targetPose;
+  private Phase phase;
 
   public DriveToPose(SwerveSubsystem swerve, LocalizationSubsystem localization, Supplier<Pose2d> target) {
     this.swerve = swerve;
     this.localization = localization;
-    this.target = target;
-    addRequirements(swerve);
+    this.targetSupplier = target;
     thetaController.enableContinuousInput(-Math.PI, Math.PI);
+    addRequirements(swerve);
   }
 
   @Override
   public void initialize() {
-    running = true;
-    Pose2d currentPose = localization.getPose();
-    Pose2d targetPose = target.get();
-    ChassisSpeeds fieldVelocity = swerve.getFieldRelativeSpeeds();
-    Translation2d linearFieldVelocity =
-        new Translation2d(fieldVelocity.vxMetersPerSecond, fieldVelocity.vyMetersPerSecond);
+    targetPose = targetSupplier.get();
+    xController.reset();
+    yController.reset();
+    thetaController.reset();
+    phase = Phase.Y_AND_HEADING;
 
-    drivekP = SmartDashboard.getNumber("DriveToPose/DrivekP", drivekP);
-    drivekD = SmartDashboard.getNumber("DriveToPose/DrivekD", drivekD);
-    thetakP = SmartDashboard.getNumber("DriveToPose/ThetakP", thetakP);
-    thetakD = SmartDashboard.getNumber("DriveToPose/ThetakD", thetakD);
-    driveMaxVelocity = SmartDashboard.getNumber("DriveToPose/DriveMaxVelocity", driveMaxVelocity);
-    driveMaxAcceleration = SmartDashboard.getNumber("DriveToPose/DriveMaxAcceleration", driveMaxAcceleration);
-    driveTolerance = SmartDashboard.getNumber("DriveToPose/DriveTolerance", driveTolerance);
-    thetaTolerance = Units.degreesToRadians(
-        SmartDashboard.getNumber("DriveToPose/ThetaToleranceDeg", Math.toDegrees(thetaTolerance)));
-
-    driveProfile = new TrapezoidProfile(
-        new TrapezoidProfile.Constraints(driveMaxVelocity, driveMaxAcceleration));
-    driveController.setPID(drivekP, 0, drivekD);
-    driveController.setTolerance(driveTolerance);
-    driveController.reset();
-    thetaController.setPID(thetakP, 0, thetakD);
-    thetaController.setTolerance(thetaTolerance);
-    thetaController.setConstraints(
-        new TrapezoidProfile.Constraints(thetaMaxVelocity, thetaMaxAcceleration));
-    thetaController.reset(
-        currentPose.getRotation().getRadians(), fieldVelocity.omegaRadiansPerSecond);
-    lastSetpointTranslation = currentPose.getTranslation();
-    lastSetpointVelocity = linearFieldVelocity;
-    lastGoalRotation = targetPose.getRotation();
-    lastTime = Timer.getTimestamp();
+    SmartDashboard.putString("DriveToPose/Target",
+        String.format("(%.2f, %.2f, %.1f deg)", targetPose.getX(), targetPose.getY(),
+            targetPose.getRotation().getDegrees()));
   }
 
   @Override
   public void execute() {
-    Pose2d currentPose = localization.getPose();
-    Pose2d targetPose = target.get();
+    Pose2d current = localization.getPose();
 
-    driveProfile = new TrapezoidProfile(
-        new TrapezoidProfile.Constraints(driveMaxVelocity, driveMaxAcceleration));
-    thetaController.setConstraints(
-        new TrapezoidProfile.Constraints(thetaMaxVelocity, thetaMaxAcceleration));
+    double ySpeed = yController.calculate(current.getY(), targetPose.getY());
+    double thetaSpeed = thetaController.calculate(
+        current.getRotation().getRadians(), targetPose.getRotation().getRadians());
+    thetaSpeed = MathUtil.clamp(thetaSpeed, -Math.PI * 2, Math.PI * 2);
 
-    Pose2d poseError = currentPose.relativeTo(targetPose);
-    driveErrorAbs = poseError.getTranslation().getNorm();
-    thetaErrorAbs = Math.abs(poseError.getRotation().getRadians());
+    double xSpeed = 0.0;
+    double yError = Math.abs(current.getY() - targetPose.getY());
+    double thetaError = Math.abs(current.getRotation().minus(targetPose.getRotation()).getDegrees());
 
-    var direction = targetPose.getTranslation().minus(lastSetpointTranslation).toVector();
-    double minDistCorrection = 0.01;
-    double setpointVelocity = direction.norm() <= minDistCorrection
-        ? lastSetpointVelocity.getNorm()
-        : lastSetpointVelocity.toVector().dot(direction) / direction.norm();
-    setpointVelocity = Math.max(setpointVelocity, -0.5);
+    // Phase 1: drive Y and heading, no X
+    // Phase 2: once Y and heading are roughly close, correct all axes together
+    if (phase == Phase.Y_AND_HEADING) {
+      if (yError < PHASE_TRANSITION_Y_TOLERANCE && thetaError < PHASE_TRANSITION_THETA_TOLERANCE) {
+        phase = Phase.ALL;
+      }
+    }
 
-    State driveSetpoint = driveProfile.calculate(
-        LOOP_PERIOD_SECS,
-        new State(direction.norm(), -setpointVelocity),
-        new State(0.0, 0.0));
+    if (phase == Phase.ALL) {
+      xSpeed = xController.calculate(current.getX(), targetPose.getX());
+    }
 
-    double driveVelocityScalar =
-        driveController.calculate(driveErrorAbs, driveSetpoint.position) + driveSetpoint.velocity;
-    if (driveErrorAbs < driveTolerance) driveVelocityScalar = 0.0;
+    // Clamp linear speed
+    Translation2d linearVelocity = new Translation2d(xSpeed, ySpeed);
+    double magnitude = linearVelocity.getNorm();
+    if (magnitude > MAX_SPEED) {
+      linearVelocity = linearVelocity.times(MAX_SPEED / magnitude);
+    }
 
-    Rotation2d targetToCurrentAngle =
-        currentPose.getTranslation().minus(targetPose.getTranslation()).getAngle();
-    Translation2d driveVelocity = new Translation2d(driveVelocityScalar, targetToCurrentAngle);
+    // Send as field-relative speeds
+    swerve.setFieldRelativeAutoSpeeds(new ChassisSpeeds(
+        linearVelocity.getX(), linearVelocity.getY(), thetaSpeed));
 
-    lastSetpointTranslation = new Pose2d(targetPose.getTranslation(), targetToCurrentAngle)
-        .transformBy(new Transform2d(driveSetpoint.position, 0.0, Rotation2d.kZero))
-        .getTranslation();
-    lastSetpointVelocity = new Translation2d(driveSetpoint.velocity, targetToCurrentAngle);
-
-    double thetaSetpointVelocity =
-        Math.abs((targetPose.getRotation().minus(lastGoalRotation)).getDegrees()) < 10.0
-            ? (targetPose.getRotation().minus(lastGoalRotation)).getRadians()
-                / (Timer.getTimestamp() - lastTime)
-            : thetaController.getSetpoint().velocity;
-    double thetaVelocity = thetaController.calculate(
-            currentPose.getRotation().getRadians(),
-            new State(targetPose.getRotation().getRadians(), thetaSetpointVelocity))
-        + thetaController.getSetpoint().velocity;
-    if (thetaErrorAbs < thetaTolerance) thetaVelocity = 0.0;
-
-    lastGoalRotation = targetPose.getRotation();
-    lastTime = Timer.getTimestamp();
-
-    swerve.setFieldRelativeAutoSpeeds(
-        ChassisSpeeds.fromFieldRelativeSpeeds(
-            driveVelocity.getX(), driveVelocity.getY(),
-            thetaVelocity, currentPose.getRotation()));
-
-    SmartDashboard.putNumber("DriveToPose/DriveError", driveErrorAbs);
-    SmartDashboard.putNumber("DriveToPose/ThetaErrorDeg", Math.toDegrees(thetaErrorAbs));
-    SmartDashboard.putBoolean("DriveToPose/AtGoal",
-        withinTolerance(driveTolerance, new Rotation2d(thetaTolerance)));
+    // Telemetry
+    double driveError = current.getTranslation().getDistance(targetPose.getTranslation());
+    SmartDashboard.putNumber("DriveToPose/DriveError", driveError);
+    SmartDashboard.putNumber("DriveToPose/YError", yError);
+    SmartDashboard.putNumber("DriveToPose/ThetaErrorDeg", thetaError);
+    SmartDashboard.putString("DriveToPose/Phase", phase.name());
+    SmartDashboard.putBoolean("DriveToPose/AtGoal", isAtGoal());
   }
 
   @Override
   public void end(boolean interrupted) {
-    running = false;
+    // Stop driving
+    swerve.setFieldRelativeAutoSpeeds(new ChassisSpeeds(0, 0, 0));
   }
 
   @Override
   public boolean isFinished() {
-    return withinTolerance(driveTolerance, new Rotation2d(thetaTolerance));
+    return isAtGoal();
   }
 
-  public boolean withinTolerance(double driveToleranceMeters, Rotation2d thetaToleranceRot) {
-    return running
-        && driveErrorAbs < driveToleranceMeters
-        && thetaErrorAbs < thetaToleranceRot.getRadians();
+  private boolean isAtGoal() {
+    Pose2d current = localization.getPose();
+    double driveError = current.getTranslation().getDistance(targetPose.getTranslation());
+    double thetaError = Math.abs(current.getRotation().minus(targetPose.getRotation()).getDegrees());
+    return driveError < DRIVE_TOLERANCE && thetaError < THETA_TOLERANCE;
   }
 
-  public boolean isRunning() {
-    return running;
+  public boolean isInAllPhase() {
+    return phase == Phase.ALL;
+  }
+
+  public double getDistanceToTarget() {
+    if (targetPose == null) return Double.MAX_VALUE;
+    return localization.getPose().getTranslation().getDistance(targetPose.getTranslation());
+
   }
 }

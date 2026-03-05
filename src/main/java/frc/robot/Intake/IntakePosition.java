@@ -20,7 +20,7 @@ public class IntakePosition extends StateMachine<IntakePosition.State> {
 		RETRACT
 	}
 
-	private static final double DEPLOY_ROTATIONS = -5.0;
+	private static final double DEPLOY_ROTATIONS = -3.9;
 
 	private final TalonFX motor;
 	private final MotionMagicTorqueCurrentFOC mmRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);

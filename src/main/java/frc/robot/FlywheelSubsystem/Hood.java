@@ -12,8 +12,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class Hood {
 	private static final double GEAR_RATIO = 84.0; 
-	private static final double MIN_DEG = 15.0;
-	private static final double MAX_DEG = 45.0;
+	private static final double MIN_DEG = -360;
+	private static final double MAX_DEG = 360;
 	private static final double AT_GOAL_TOL_DEG = 0.1;
 
 	private final TalonFX motor;
@@ -27,8 +27,8 @@ public class Hood {
 		cfg.Slot0 = new Slot0Configs().withKP(80).withKI(0).withKD(0);
 		cfg.MotionMagic =
 				new MotionMagicConfigs()
-						.withMotionMagicCruiseVelocity(20.0)
-						.withMotionMagicAcceleration(40.0);
+						.withMotionMagicCruiseVelocity(80.0)
+						.withMotionMagicAcceleration(100.0);
 		cfg.CurrentLimits = new CurrentLimitsConfigs()
 				.withSupplyCurrentLimit(20.0)
 				.withSupplyCurrentLimitEnable(true)
@@ -36,6 +36,9 @@ public class Hood {
 				.withStatorCurrentLimitEnable(true);
 
 		motor.getConfigurator().apply(cfg);
+
+		// Zero the encoder so current position = 0 degrees
+		motor.setPosition(0.0);
 	}
 
 	public void setAngleDegrees(double degrees) {
@@ -50,9 +53,8 @@ public class Hood {
 		motor.setControl(mmRequest.withPosition(currentRot));
 	}
 
-	/** Drive the hood motor at an open-loop duty cycle (-1.0 to 1.0). */
 	public void runDutyCycle(double percent) {
-		motor.setControl(new DutyCycleOut(-percent));
+		motor.setControl(new DutyCycleOut(percent));
 	}
 
 	/** Coast / stop the hood motor with no active control. */

@@ -11,13 +11,28 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.util.scheduling.SubsystemPriority;
 import frc.robot.util.state_machines.StateMachine;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class LookupTable extends StateMachine<LookupTable.State> {
 
     public enum State { DISABLED, ENABLED }
+
+    // Pass interp table: distance (m) → RPM
+    public static final double PASS_HOOD_ANGLE_DEG = -50.0;
+    private static final InterpolatingDoubleTreeMap PASS_RPM_TABLE =
+        InterpolatingDoubleTreeMap.ofEntries(
+            Map.entry(3.0, 3000.0),
+            Map.entry(5.0, 5000.0),
+            Map.entry(7.0, 6200.0),
+            Map.entry(9.0, 6500.0));
+
+    public static double getPassRpm(double distanceMeters) {
+        return PASS_RPM_TABLE.get(distanceMeters);
+    }
 
     public static class ShotPoint {
         public final double distanceMeters;
@@ -85,11 +100,10 @@ public class LookupTable extends StateMachine<LookupTable.State> {
 // do your job here
         addShotPoint(new ShotPoint(2.8, 3200, 0));
         addShotPoint(new ShotPoint(3.2, 3300, 0));
-        addShotPoint(new ShotPoint(3.6, 3450, 0));
+        addShotPoint(new ShotPoint(3.6, 3490, 0));
         addShotPoint(new ShotPoint(4, 3600, 0));
-        addShotPoint(new ShotPoint(5.1, 4000, 0));
-
-
+        addShotPoint(new ShotPoint(4.9, 4000, 0));
+        addShotPoint(new ShotPoint(5.1, 4200, 0));
         addTofPoint(7.83, 1.2);
     }
 

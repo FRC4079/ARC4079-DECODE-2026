@@ -29,8 +29,29 @@ public final class FieldPoints {
   private static Translation2d HEADINGLOCK_RED_POINT = new Translation2d(12, 4);
   
   // outpost poses
-  private static Pose2d OUTPOST_BLUE = new Pose2d(0.766, 0.433, Rotation2d.fromDegrees(0));
-  private static Pose2d OUTPOST_RED = new Pose2d(16.14, 7.291, Rotation2d.fromDegrees(180.0));
+  private static Pose2d OUTPOST_BLUE= new Pose2d(0.766, 0.433, Rotation2d.fromDegrees(0));
+  private static Pose2d OUTPOST_RED = new Pose2d(16.25, 7.291, Rotation2d.fromDegrees(180.0));
+
+  // Trench zones (X and Y bounds)
+  // Trench X bounds: only lock when robot X is between 10.8 and 13.0
+  public static final double TRENCH_X_MIN = 10.4;
+  public static final double TRENCH_X_MAX = 13.2;
+  // Right trench (top of field): lock Y to 7.5 when robot Y > 6.8
+  public static final double RIGHT_TRENCH_Y_THRESHOLD = 6.8;
+  public static final double RIGHT_TRENCH_Y_LOCK = 7.5;
+  // Left trench (bottom of field): lock Y to 0.6 when robot Y < 1.3
+  public static final double LEFT_TRENCH_Y_THRESHOLD = 1.3;
+  public static final double LEFT_TRENCH_Y_LOCK = 0.6;
+
+  // Pass target points
+  public static final Translation2d PASS_TARGET_RIGHT = new Translation2d(14.0, 7.0);
+  public static final Translation2d PASS_TARGET_LEFT  = new Translation2d(14.0, 2.4);
+
+  // Y approach zones — ramp assist in as driver approaches trench Y threshold
+  // Right trench: approach starts at 5.5, full lock at 6.8
+  public static final double RIGHT_TRENCH_APPROACH_Y = 5.5;
+  // Left trench: approach starts at 2.5, full lock at 1.3
+  public static final double LEFT_TRENCH_APPROACH_Y = 2.5;
 
   // getter stuff
   public static Pose2d getRA1() { return RA1; }

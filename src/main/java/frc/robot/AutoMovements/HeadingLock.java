@@ -1,5 +1,7 @@
 package frc.robot.AutoMovements;
 
+import com.ctre.phoenix6.mechanisms.swerve.LegacySwerveRequest.PointWheelsAt;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -24,18 +26,25 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
   private double blueTurretOffsetDegrees = -38;
 
   private static final String LIMELIGHT_LEFT = "limelight-left";
-  private static final double STATIONARY_SPEED_THRESHOLD = 0.05; // m/s — consider robot "not moving" below this
+  private static final String LIMELIGHT_RIGHT = "limelight-right";
+  private static final double STATIONARY_SPEED_THRESHOLD = 0.2; // m/s -- linear speed below this = stationary
+  private static final double STATIONARY_ROT_THRESHOLD = 0.2; // rad/s -- rotational speed below this = not spinning
   private static final long MT1_CORRECTION_COOLDOWN_MS = 500;
   private long lastMt1CorrectionTimestamp = 0;
-  private static final double HEADING_TOLERANCE_DEG = 3;
+  private static final double MT1_MAX_CORRECTION_DEG = 15.0; // reject if diff > this (bad data)
+  private static final double MT1_MIN_CORRECTION_DEG = 1.0;  // ignore if diff < this (not worth correcting)
+  private static final double MT1_MIN_TAG_AREA = 0;       // reject if avg tag area too small (too far away)
+  private boolean mt1HeadingCorrectionEnabled = true;
+  private boolean mt1RightHeadingCorrectionEnabled = true;
+  private static final double HEADING_TOLERANCE_DEG = 6;
   private double lastTargetAngleDeg = 0.0;
-  private static final double HEADING_SETTLE_TIME_S = 0.1;
-  private double headingOnTargetStartTime = -1.0;
+  private static final double HEADING_SETTLE_TIME_S = 0;
+  private double headingOnTargetStartTime = 0;
 
  
   private static final double CLOSE_DISTANCE_M = 1.0;
   private static final double FAR_DISTANCE_M = 5;
-  private static final double MAX_CORRECTION_DEG = 3.3;
+  private static final double MAX_CORRECTION_DEG = 8;
 
   public enum HeadingLockState {
     DISABLED,
@@ -60,6 +69,8 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
   public void setBlueTargetPoint(Translation2d point) {
     this.blueTargetPoint = point;
   }
+
+
 
   public void setRedTargetPose(Pose2d pose) {
     this.redTargetPoint = pose.getTranslation();
@@ -130,6 +141,7 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
     SmartDashboard.putNumber("HeadingLock/DistToBlue_m",
         robotTranslation.getDistance(blueTargetPoint));
     checkAndCorrectHeadingWithMT1();
+    checkAndCorrectHeadingWithMT1Right();
     switch (getState()) {
       case RED_LOCK -> faceTargetPoseBased(redTargetPoint, redTurretOffsetDegrees);
       case BLUE_LOCK -> faceTargetPoseBased(blueTargetPoint, blueTurretOffsetDegrees);
@@ -137,14 +149,25 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
     }
   }
 
+
   private void checkAndCorrectHeadingWithMT1() {
+    // Read toggle from dashboard
+    mt1HeadingCorrectionEnabled = SmartDashboard.getBoolean("HeadingLock/MT1_Enabled", mt1HeadingCorrectionEnabled);
+    SmartDashboard.putBoolean("HeadingLock/MT1_Enabled", mt1HeadingCorrectionEnabled);
+
+    if (!mt1HeadingCorrectionEnabled) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "DISABLED");
+      return;
+    }
+
     // Cooldown: don't correct more often than every 500ms
     long now = System.currentTimeMillis();
     if (now - lastMt1CorrectionTimestamp < MT1_CORRECTION_COOLDOWN_MS) {
       return;
     }
 
-    // Only correct when robot is stationary
+    // Only correct when robot is stationary (both linear and rotational)
     var speeds = swerve.getRobotRelativeSpeeds();
     double linearSpeed = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
     if (linearSpeed > STATIONARY_SPEED_THRESHOLD) {
@@ -152,8 +175,12 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
       SmartDashboard.putString("HeadingLock/MT1_Status", "MOVING");
       return;
     }
+    if (Math.abs(speeds.omegaRadiansPerSecond) > STATIONARY_ROT_THRESHOLD) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "ROTATING");
+      return;
+    }
 
-    // Check left limelight only
     var mt1Estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(LIMELIGHT_LEFT);
 
     if (mt1Estimate == null || mt1Estimate.tagCount < 2) {
@@ -162,17 +189,117 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
       return;
     }
 
+    if (mt1Estimate.avgTagArea < MT1_MIN_TAG_AREA) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "TAGS_TOO_FAR");
+      return;
+    }
+
     double mt1HeadingDeg = mt1Estimate.pose.getRotation().getDegrees();
     double ourHeadingDeg = localization.getPose().getRotation().getDegrees();
-    double diff = Math.abs(mt1HeadingDeg - ourHeadingDeg);
-    if (diff > 180) diff = 360 - diff;
+    double diff = mt1HeadingDeg - ourHeadingDeg;
+    // Normalize to [-180, 180]
+    diff = ((diff + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    double absDiff = Math.abs(diff);
 
     SmartDashboard.putNumber("HeadingLock/MT1_HeadingDeg", mt1HeadingDeg);
     SmartDashboard.putNumber("HeadingLock/OurHeadingDeg", ourHeadingDeg);
     SmartDashboard.putNumber("HeadingLock/HeadingDiffDeg", diff);
+    SmartDashboard.putNumber("HeadingLock/MT1_AvgTagArea", mt1Estimate.avgTagArea);
+
+    // Reject if difference is too large (likely bad vision data)
+    if (absDiff > MT1_MAX_CORRECTION_DEG) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "DIFF_TOO_LARGE");
+      return;
+    }
+
+    // Skip if difference is too small (not worth correcting)
+    if (absDiff < MT1_MIN_CORRECTION_DEG) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Status", "DIFF_TOO_SMALL");
+      return;
+    }
 
     SmartDashboard.putBoolean("HeadingLock/MT1_Correcting", true);
     SmartDashboard.putString("HeadingLock/MT1_Status", "CORRECTING");
+    localization.resetGyro(Rotation2d.fromDegrees(mt1HeadingDeg));
+    lastMt1CorrectionTimestamp = now;
+  }
+
+  private void checkAndCorrectHeadingWithMT1Right() {
+    // Read toggle from dashboard
+    mt1RightHeadingCorrectionEnabled = SmartDashboard.getBoolean("HeadingLock/MT1_Right_Enabled", mt1RightHeadingCorrectionEnabled);
+    SmartDashboard.putBoolean("HeadingLock/MT1_Right_Enabled", mt1RightHeadingCorrectionEnabled);
+
+    if (!mt1RightHeadingCorrectionEnabled) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "DISABLED");
+      return;
+    }
+
+    // Cooldown: don't correct more often than every 500ms
+    long now = System.currentTimeMillis();
+    if (now - lastMt1CorrectionTimestamp < MT1_CORRECTION_COOLDOWN_MS) {
+      return;
+    }
+
+    // Only correct when robot is stationary (both linear and rotational)
+    var speeds = swerve.getRobotRelativeSpeeds();
+    double linearSpeed = Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond);
+    if (linearSpeed > STATIONARY_SPEED_THRESHOLD) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "MOVING");
+      return;
+    }
+    if (Math.abs(speeds.omegaRadiansPerSecond) > STATIONARY_ROT_THRESHOLD) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "ROTATING");
+      return;
+    }
+
+    var mt1Estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(LIMELIGHT_RIGHT);
+
+    if (mt1Estimate == null || mt1Estimate.tagCount < 2) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", mt1Estimate == null ? "NO_DATA" : "NEED_2_TAGS");
+      return;
+    }
+
+    if (mt1Estimate.avgTagArea < MT1_MIN_TAG_AREA) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "TAGS_TOO_FAR");
+      return;
+    }
+
+    double mt1HeadingDeg = mt1Estimate.pose.getRotation().getDegrees();
+    double ourHeadingDeg = localization.getPose().getRotation().getDegrees();
+    double diff = mt1HeadingDeg - ourHeadingDeg;
+    // Normalize to [-180, 180]
+    diff = ((diff + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
+    double absDiff = Math.abs(diff);
+
+    SmartDashboard.putNumber("HeadingLock/MT1_Right_HeadingDeg", mt1HeadingDeg);
+    SmartDashboard.putNumber("HeadingLock/MT1_Right_OurHeadingDeg", ourHeadingDeg);
+    SmartDashboard.putNumber("HeadingLock/MT1_Right_HeadingDiffDeg", diff);
+    SmartDashboard.putNumber("HeadingLock/MT1_Right_AvgTagArea", mt1Estimate.avgTagArea);
+
+    // Reject if difference is too large (likely bad vision data)
+    if (absDiff > MT1_MAX_CORRECTION_DEG) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "DIFF_TOO_LARGE");
+      return;
+    }
+
+    // Skip if difference is too small (not worth correcting)
+    if (absDiff < MT1_MIN_CORRECTION_DEG) {
+      SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", false);
+      SmartDashboard.putString("HeadingLock/MT1_Right_Status", "DIFF_TOO_SMALL");
+      return;
+    }
+
+    SmartDashboard.putBoolean("HeadingLock/MT1_Right_Correcting", true);
+    SmartDashboard.putString("HeadingLock/MT1_Right_Status", "CORRECTING");
     localization.resetGyro(Rotation2d.fromDegrees(mt1HeadingDeg));
     lastMt1CorrectionTimestamp = now;
   }

@@ -15,6 +15,7 @@ public class HoodStateMachine extends StateMachine<HoodStateMachine.State> {
     this.hood = hood;
   }
 
+
   public void requestOff() { setStateFromRequest(State.OFF); }
   public void requestDegrees(double degrees) {
     this.targetDegrees = degrees;
@@ -23,6 +24,11 @@ public class HoodStateMachine extends StateMachine<HoodStateMachine.State> {
 
   @Override
   protected State getNextState(State current) { return current; }
+
+  @Override
+  protected void collectInputs() {
+    hood.periodicTelemetry();
+  }
 
   @Override
   protected void afterTransition(State newState) {

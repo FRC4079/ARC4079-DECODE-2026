@@ -84,6 +84,7 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   
   private final Timer timeSinceAutoSpeeds = new Timer();
   private double teleopSlowModePercent = 0.0;
+  private boolean vyOverrideActive = false;
   private double rawControllerXValue = 0.0;
   private double rawControllerYValue = 0.0;
 
@@ -198,6 +199,46 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
 
   public ChassisSpeeds getTeleopSpeeds() {
     return teleopSpeeds;
+  }
+
+  /**
+   * Overrides the field-relative Y (lateral) component of teleop speeds
+   * with a specific velocity value, then re-sends the swerve request.
+   * Used for trench Y-lock.
+   */
+  public void overrideTeleopVY(double vyMetersPerSecond) {
+    vyOverrideActive = true;
+    teleopSpeeds = new ChassisSpeeds(
+        teleopSpeeds.vxMetersPerSecond,
+        vyMetersPerSecond,
+        teleopSpeeds.omegaRadiansPerSecond);
+    sendSwerveRequest();
+  }
+
+  /**
+   * Blends the driver's joystick VY with a PID correction VY.
+   * blend=0 → full driver control, blend=1 → full PID override.
+   */
+  public void blendTeleopVY(double pidVy, double blend) {
+    vyOverrideActive = true;
+    double driverVy = teleopSpeeds.vyMetersPerSecond;
+    double blendedVy = driverVy * (1.0 - blend) + pidVy * blend;
+    teleopSpeeds = new ChassisSpeeds(
+        teleopSpeeds.vxMetersPerSecond,
+        blendedVy,
+        teleopSpeeds.omegaRadiansPerSecond);
+    sendSwerveRequest();
+  }
+
+  /**
+   * Clears the VY override so normal joystick lateral control resumes immediately.
+   */
+  public void clearTeleopVYOverride() {
+    if (vyOverrideActive) {
+      vyOverrideActive = false;
+      // Re-send with the original joystick-derived teleopSpeeds (already set by driveTeleop)
+      sendSwerveRequest();
+    }
   }
 
   private ChassisSpeeds calculateFieldRelativeSpeeds() {
