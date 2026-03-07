@@ -55,18 +55,18 @@ public class PointToPointAutos {
   private final SendableChooser<Command> chooser = new SendableChooser<>();
 
   public PointToPointAutos(
-      SwerveSubsystem swerve,
-      LocalizationSubsystem localization,
-      Flywheel flywheel,
-      Hood hood,
-      FlywheelStateMachine flywheelSM,
-      HoodStateMachine hoodSM,
-      HeadingLock headingLock,
-      LookupTable turretLookup,
-      Indexer indexer,
-      Hopper hopper,
-      intaker intakeRoller,
-      IntakePosition intakePosition) {
+          SwerveSubsystem swerve,
+          LocalizationSubsystem localization,
+          Flywheel flywheel,
+          Hood hood,
+          FlywheelStateMachine flywheelSM,
+          HoodStateMachine hoodSM,
+          HeadingLock headingLock,
+          LookupTable turretLookup,
+          Indexer indexer,
+          Hopper hopper,
+          intaker intakeRoller,
+          IntakePosition intakePosition) {
     this.swerve = swerve;
     this.localization = localization;
     this.flywheel = flywheel;
@@ -84,6 +84,9 @@ public class PointToPointAutos {
     chooser.setDefaultOption("Do Nothing", Commands.none());
     chooser.addOption("Red Right", RedRight());
     chooser.addOption("Red Left", RedLeft());
+    chooser.addOption("Simple Red Left", SimpleRedLeft());
+    chooser.addOption("Simple Red Right", SimpleRedRight());
+    chooser.addOption("Simple Blue Left", SimpleBlueLeft());
 
     SmartDashboard.putData("Auto Chooser", chooser);
   }
@@ -115,11 +118,11 @@ public class PointToPointAutos {
 
   private Command startFeeding() {
     return Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled())
-        .andThen(Commands.runOnce(() -> {
-          indexer.feed();
-          hopper.feed();
-        }))
-        .withName("WaitThenFeed");
+            .andThen(Commands.runOnce(() -> {
+              indexer.feed();
+              hopper.feed();
+            }))
+            .withName("WaitThenFeed");
   }
 
   private Command stopFeeding() {
@@ -158,65 +161,115 @@ public class PointToPointAutos {
     });
   }
 
+  private Command SimpleRedLeft() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(12.84, 0.7, 180.0)
+            .driveToAll(15.3, 0.8, 180)
+            .run(startAiming())
+            .run(startFeeding())
+            .run(stopAll())
+            .build()
+            .withName("Red Left");
+  }
+
+  private Command SimpleBlueLeft() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(3.5539205074310303, 7.328, 0)
+            .driveToAll(1.137, 7.11, 0)
+            .run(startAiming())
+            .run(startFeeding())
+            .run(stopAll())
+            .build()
+            .withName("Simple Blue Left");
+  }
+
+  private Command SimpleBlueRight() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(3.592, 0.721, 0)
+            .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
+            .run(startAiming())
+            .run(startFeeding())
+            .run(stopAll())
+            .build()
+            .withName("Simple Blue Right");
+  }
+
+  private Command SimpleRedRight() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(13.0, 7.5, 180.0)
+            .driveToAll(15, 6.7,180)
+            .run(startAiming())
+            .run(startFeeding())
+            .run(stopAll())
+            .build()
+            .withName("Simple Red Right");
+
+
+
+  }
+
+
+
+
 
   private Command RedLeft() {
     return AutoRoutine.create(swerve, localization)
-        .startAt(12.84, 0.7, 180.0)
-        .driveToAll(8.8, 0.7, 270)
-        .run(startIntaking())
-        .driveToAll(8.8, 3.6, 270)
-        .driveToAll(8.8, 0.7, 51.56)
-        .run(stopIntaking())
-        .driveToAll(15.3, 0.8, 180)
-        .run(startAiming())
-        .run(startFeeding())
-        .waitSeconds(3)
-        .run(stopAiming())
-        .run(stopFeeding())
-        .driveToAll(8.8, 0.7, 270)
-        .run(startIntaking())
-        .driveToAll(8.8, 3.6, 270)
-        .driveToAll(8.8, 0.7, 180)
-        .run(stopIntaking())
-        .driveToAll(15.3, 0.7, 51.56)
-        .run(startAiming())
-        .run(startFeeding())
-        .waitSeconds(3)
-        .run(stopAll())
-        .build()
-        .withName("Red Left");
+            .startAt(12.84, 0.7, 180.0)
+            .driveToAll(8.8, 0.7, 270)
+            .run(startIntaking())
+            .driveToAll(8.8, 3.6, 270)
+            .driveToAll(8.8, 0.7, 51.56)
+            .run(stopIntaking())
+            .driveToAll(15.3, 0.8, 180)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .run(stopAiming())
+            .run(stopFeeding())
+            .driveToAll(8.8, 0.7, 270)
+            .run(startIntaking())
+            .driveToAll(8.8, 3.6, 270)
+            .driveToAll(8.8, 0.7, 180)
+            .run(stopIntaking())
+            .driveToAll(15.3, 0.7, 51.56)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .run(stopAll())
+            .build()
+            .withName("Red Left");
   }
 
   private Command RedRight() {
     return AutoRoutine.create(swerve, localization)
-        .startAt(13.0, 7.5, 180.0)
-        .driveToAll(9, 7.5, 90)
-        .run(startIntaking())
-        .driveToAll(9, 4.6, 90)
-        .driveToAll(9,7.45, 180)
-        .run(stopIntaking())
-        .driveToAll(13.2, 7.5, 180)
-        .driveToAll(15, 6.7,180)
-        .run(startAiming())
-        .run(startFeeding())
-        .waitSeconds(3)
-        .driveToAll(13, 7.5, 180)
-        .driveToAll(9, 7.5, 90)
-        .run(startIntaking())
-        .driveToAll(9, 4.6, 90)
-        .driveToAll(9,7.45, 180)
-        .run(stopIntaking())
-        .driveToAll(13.2, 7.5, 180)
-        .driveToAll(16.25, 7.291,180)
-        .run(startAiming())
-        .run(startFeeding())
-        .waitSeconds(5)
-        .run(stopAll())
-        .build()
-        .withName("Red Right");
-}
+            .startAt(13.0, 7.5, 180.0)
+            .driveToAll(9, 7.5, 90)
+            .run(startIntaking())
+            .driveToAll(9, 4.6, 90)
+            .driveToAll(9,7.45, 180)
+            .run(stopIntaking())
+            .driveToAll(13.2, 7.5, 180)
+            .driveToAll(15, 6.7,180)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .driveToAll(13, 7.5, 180)
+            .driveToAll(9, 7.5, 90)
+            .run(startIntaking())
+            .driveToAll(9, 4.6, 90)
+            .driveToAll(9,7.45, 180)
+            .run(stopIntaking())
+            .driveToAll(13.2, 7.5, 180)
+            .driveToAll(16.25, 7.291,180)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(5)
+            .run(stopAll())
+            .build()
+            .withName("Red Right");
+  }
 
 
 
- 
+
 }

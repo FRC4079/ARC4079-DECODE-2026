@@ -97,7 +97,7 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.flywheel     = flywheel;
         this.hood         = hood;
 
-// do your job here
+// do your job her
         addShotPoint(new ShotPoint(2.8, 3100, 0));
         addShotPoint(new ShotPoint(3.2, 3200, 0));
         addShotPoint(new ShotPoint(3.6, 3390, 0));

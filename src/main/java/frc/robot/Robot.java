@@ -186,6 +186,8 @@ public class Robot extends TimedRobot {
     public void autonomousInit() {
         // Use the point-to-point auto chooser from SmartDashboard
         autonomousCommand = pointToPointAutos.getSelected();
+        //autonomousCommand = pointToPointAutos.getPPSelected();
+
         CommandScheduler.getInstance().schedule(autonomousCommand);
 
         ElasticLayoutUtil.onEnable();

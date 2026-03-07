@@ -4,7 +4,8 @@
   "holonomicMode": true,
   "pathFolders": [
     "Auto Intake Paths",
-    "Auto Path Coords"
+    "Auto Path Coords",
+    "Box of Melon"
   ],
   "autoFolders": [],
   "defaultMaxVel": 3.0,
