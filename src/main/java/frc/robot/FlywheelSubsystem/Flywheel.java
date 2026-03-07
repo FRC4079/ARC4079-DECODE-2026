@@ -18,7 +18,7 @@ public class Flywheel {
 			new VelocityTorqueCurrentFOC(0).withSlot(0);
 
 
-	public static final double kV = 0.325;
+	public static final double kV = 0.38;
 	public static final double kP = 3.6;
 
 	

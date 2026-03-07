@@ -167,6 +167,7 @@ public class PointToPointAutos {
             .driveToAll(15.3, 0.8, 180)
             .run(startAiming())
             .run(startFeeding())
+            .waitSeconds(3)
             .run(stopAll())
             .build()
             .withName("Red Left");
@@ -178,6 +179,7 @@ public class PointToPointAutos {
             .driveToAll(1.137, 7.11, 0)
             .run(startAiming())
             .run(startFeeding())
+            .waitSeconds(3)
             .run(stopAll())
             .build()
             .withName("Simple Blue Left");
@@ -187,8 +189,9 @@ public class PointToPointAutos {
     return AutoRoutine.create(swerve, localization)
             .startAt(3.592, 0.721, 0)
             .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
-            .run(startAiming())
+            .run(startAiming()).
             .run(startFeeding())
+            .waitSeconds(3)
             .run(stopAll())
             .build()
             .withName("Simple Blue Right");
@@ -200,17 +203,11 @@ public class PointToPointAutos {
             .driveToAll(15, 6.7,180)
             .run(startAiming())
             .run(startFeeding())
+            .waitSeconds(3)
             .run(stopAll())
             .build()
             .withName("Simple Red Right");
-
-
-
   }
-
-
-
-
 
   private Command RedLeft() {
     return AutoRoutine.create(swerve, localization)

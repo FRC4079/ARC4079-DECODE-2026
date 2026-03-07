@@ -98,11 +98,11 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.hood         = hood;
 
 // do your job her
-        addShotPoint(new ShotPoint(2.8, 3100, 0));
+        addShotPoint(new ShotPoint(3.0, 3025, 0));
         addShotPoint(new ShotPoint(3.2, 3200, 0));
-        addShotPoint(new ShotPoint(3.6, 3390, 0));
-        addShotPoint(new ShotPoint(4, 3500, 0));
-        addShotPoint(new ShotPoint(4.9, 3900, 0));
+        addShotPoint(new ShotPoint(3.6, 3350, 0));
+        addShotPoint(new ShotPoint(4, 3440, 0));
+        addShotPoint(new ShotPoint(4.9, 3825, 0));
         addShotPoint(new ShotPoint(5.1, 4100, 0));
 
 
