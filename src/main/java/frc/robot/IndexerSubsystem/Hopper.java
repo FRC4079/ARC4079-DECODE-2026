@@ -62,7 +62,7 @@ public class Hopper extends StateMachine<Hopper.HopperState> {
     switch (newState) {
       case OFF -> Hopper.setControl(new DutyCycleOut(0.0));
       case INTAKE -> Hopper.setControl(new DutyCycleOut(INTAKE_POWER));
-      case FEED -> Hopper.setControl(new DutyCycleOut(FEED_POWER));
+      case FEED -> Hopper.setControl(new DutyCycleOut(dutyPercent));
       case REVERSE -> Hopper.setControl(new DutyCycleOut(REVERSE_POWER));
       case PULSE -> {
         pulseTimer.restart();

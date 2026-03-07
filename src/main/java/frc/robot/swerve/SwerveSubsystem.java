@@ -28,7 +28,7 @@ import frc.robot.util.state_machines.StateMachine;
 import java.util.Map;
 
 public class SwerveSubsystem extends StateMachine<SwerveState> {
-  public static final double MaxSpeed = 4.75;
+  public static final double MaxSpeed = 4.75 * 0.75;
   private static final double maxAngularRate = Units.rotationsToRadians(4);
   private static final Rotation2d TELEOP_MAX_ANGULAR_RATE = Rotation2d.fromRotations(2);
 
@@ -87,6 +87,7 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   private boolean vyOverrideActive = false;
   private double rawControllerXValue = 0.0;
   private double rawControllerYValue = 0.0;
+  private double intakeSpeedMultiplier = 1.0;
 
   public ChassisSpeeds getRobotRelativeSpeeds() {
     return robotRelativeSpeeds;
@@ -182,9 +183,9 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
 
     teleopSpeeds =
         new ChassisSpeeds(
-            -1.0 * mappedY * MaxSpeed * teleopSlowModePercent,
-            mappedX * MaxSpeed * teleopSlowModePercent,
-            rightX * TELEOP_MAX_ANGULAR_RATE.getRadians() * teleopSlowModePercent);
+            -1.0 * mappedY * MaxSpeed * teleopSlowModePercent * intakeSpeedMultiplier,
+            mappedX * MaxSpeed * teleopSlowModePercent * intakeSpeedMultiplier,
+            rightX * TELEOP_MAX_ANGULAR_RATE.getRadians() * teleopSlowModePercent * intakeSpeedMultiplier);
 
     sendSwerveRequest();
   }
@@ -361,5 +362,18 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
 
   public void setElevatorHeight(double height) {
     elevatorHeight = height;
+  }
+
+  /**
+   * Sets a speed multiplier applied during teleop while intaking.
+   * @param multiplier 0.0–1.0 (e.g. 0.5 for 50% speed)
+   */
+  public void setIntakeSpeedMultiplier(double multiplier) {
+    intakeSpeedMultiplier = multiplier;
+  }
+
+  /** Restores full speed after intaking. */
+  public void clearIntakeSpeedMultiplier() {
+    intakeSpeedMultiplier = 1.0;
   }
 }
