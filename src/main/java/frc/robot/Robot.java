@@ -94,7 +94,7 @@ public class Robot extends TimedRobot {
 
     private final phaseTimer phaseTimer = new phaseTimer();
     private final PointToPointAutos pointToPointAutos;
-    private double manualShootRpm = 4000.0;
+    private double manualShootRpm = 3900.0;
     private final Orchestra orchestra = new Orchestra();
     private final edu.wpi.first.math.controller.PIDController trenchYController =
             new edu.wpi.first.math.controller.PIDController(3.0, 0.0, 0.0);
