@@ -83,15 +83,46 @@
                 }
               },
               {
-                "type": "named",
+                "type": "sequential",
                 "data": {
-                  "name": "IntakerIntake"
-                }
-              },
-              {
-                "type": "named",
-                "data": {
-                  "name": null
+                  "commands": [
+                    {
+                      "type": "wait",
+                      "data": {
+                        "waitTime": 2.2
+                      }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "IntakePositionDeploy"
+                      }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "IntakerIntake"
+                      }
+                    },
+                    {
+                      "type": "wait",
+                      "data": {
+                        "waitTime": 2.0
+                      }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "IntakerOff"
+                      }
+                    },
+                    {
+                      "type": "named",
+                      "data": {
+                        "name": "IntakePositionRetract"
+                      }
+                    }
+                  ]
                 }
               }
             ]

@@ -9,7 +9,9 @@ import frc.robot.vision.limelight.LimelightState;
 public class Hardware {
 
   public final CommandXboxController driverController = new CommandXboxController(0);
-  public final CommandXboxController testController   = new CommandXboxController(1); // testing only
+  public final CommandXboxController testController   = new CommandXboxController(1);
+
+  // testing only
 
   public final TalonFX flywheelA1        = new TalonFX(4);   // shooter bottom
   public final TalonFX flywheelA2        = new TalonFX(6);   // shooter top spin

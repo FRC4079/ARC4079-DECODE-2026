@@ -3,10 +3,7 @@ package frc.robot.controller;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.AutoMovements.HeadingLock;
-import frc.robot.FlywheelSubsystem.Flywheel;
-import frc.robot.FlywheelSubsystem.FlywheelStateMachine;
-import frc.robot.FlywheelSubsystem.Hood;
-import frc.robot.FlywheelSubsystem.HoodStateMachine;
+import frc.robot.FlywheelSubsystem.*;
 import frc.robot.IndexerSubsystem.Indexer;
 import frc.robot.IndexerSubsystem.Hopper;
 import frc.robot.Intake.IntakePosition;
@@ -20,6 +17,7 @@ right bumper  -toggle heading lock enable/disable.
 b/x - Turret offset +-1 deg report current offset.
 left/right trigger - intakepos up setpoint +-1 deg; also adjust indexer/hopper targets by +-50 rpm conv to dut
 a - toggle intakeposition between Up and Down (starts Up).
+right/left joystick press - offset hood angle for lookup table by +-2 deg
  */
 public class TestController {
   private final CommandXboxController controller;
@@ -32,6 +30,8 @@ public class TestController {
   private final Indexer indexer;
   private final Hopper hopper;
 
+  private final LookupTable lookupTable;
+
   private double hoodTargetDeg;
   private double flywheelTargetRpm;
   private boolean headingLockEnabled = false;
@@ -39,20 +39,23 @@ public class TestController {
   private double intakeUpDeg = 0.0;
   private boolean intakeIsUp = true;
 
+  private boolean rStickDoubleDebounce = false;
+
   private double indexerTargetRpm = 0.0;
   private double hopperTargetRpm = 0.0;
 
   private static final double RPM_TO_DUTY_SCALE = 5000.0; 
 
   public TestController(CommandXboxController controller,
-      Hood hood,
-      HoodStateMachine hoodSM,
-      Flywheel flywheel,
-      FlywheelStateMachine flywheelSM,
-      HeadingLock headingLock,
-      IntakePosition intakePosition,
-      Indexer indexer,
-      Hopper hopper) {
+        Hood hood,
+        HoodStateMachine hoodSM,
+        Flywheel flywheel,
+        FlywheelStateMachine flywheelSM,
+        HeadingLock headingLock,
+        IntakePosition intakePosition,
+        Indexer indexer,
+        Hopper hopper,
+        LookupTable lookupTable) {
     this.controller = controller;
     this.hood = hood;
     this.hoodSM = hoodSM;
@@ -62,6 +65,7 @@ public class TestController {
     this.intakePosition = intakePosition;
     this.indexer = indexer;
     this.hopper = hopper;
+    this.lookupTable = lookupTable;
 
     this.hoodTargetDeg = safeHoodDeg();
     this.flywheelTargetRpm = 0.0;
@@ -173,6 +177,29 @@ public class TestController {
           intakePosition.deploy();
         }
         SmartDashboard.putBoolean("Test/Intake/is_up", intakeIsUp);
+      })
+    );
+
+    controller.leftStick().onTrue(
+      edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
+          lookupTable.incrementHoodAngleOffsetDeg(2.0);
+      })
+    );
+
+    controller.rightStick().onTrue(
+      edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
+          if (!rStickDoubleDebounce){
+              rStickDoubleDebounce = true;
+              lookupTable.incrementHoodAngleOffsetDeg(-2.0);
+          } else {
+              lookupTable.resetHoodAngleOffestDeg();
+          }
+      })
+    );
+
+    controller.rightStick().onTrue(
+      edu.wpi.first.wpilibj2.command.Commands.runOnce(() -> {
+          lookupTable.incrementHoodAngleOffsetDeg(-2.0);
       })
     );
   }

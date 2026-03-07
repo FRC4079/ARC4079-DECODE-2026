@@ -87,7 +87,8 @@ public class Robot extends TimedRobot {
             headingLock,
             intakePosition,
             indexer,
-            hopper);
+            hopper,
+            turretLookup);
 
 
 
@@ -487,6 +488,7 @@ public class Robot extends TimedRobot {
 
                             if (shootMode) {
                                 if (!turretLookup.hasCachedParameters()) return;
+                                //if () return;
                                 double rpm = turretLookup.getCachedFlywheelRpm();
                                 double hoodRad = turretLookup.getCachedHoodAngleRad();
                                 flywheelSM.requestRpm(rpm);

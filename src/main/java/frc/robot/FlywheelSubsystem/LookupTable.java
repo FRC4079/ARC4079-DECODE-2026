@@ -64,7 +64,7 @@ public class LookupTable extends StateMachine<LookupTable.State> {
             double     timeOfFlight) {}
 
     private static final double PHASE_DELAY_SECS = 0.03;
-    private static final double MIN_DISTANCE = 1.0;
+    private static final double MIN_DISTANCE = 2.5;
     private static final double MAX_DISTANCE = 6.0;
     private static final Translation2d ROBOT_TO_LAUNCHER_TRANSLATION = new Translation2d(0.0, 0.0);
     private static final Rotation2d ROBOT_TO_LAUNCHER_ROTATION = Rotation2d.fromDegrees(36 + 180);
@@ -125,6 +125,7 @@ public class LookupTable extends StateMachine<LookupTable.State> {
 
     public double getHoodAngleOffsetDeg() { return hoodAngleOffsetDeg; }
     public void incrementHoodAngleOffsetDeg(double deltaDeg) { hoodAngleOffsetDeg += deltaDeg; }
+    public void resetHoodAngleOffestDeg() { hoodAngleOffsetDeg = 0.0; }
 
     public ShootingParameters getParameters() {
         if (cachedParameters != null) return cachedParameters;
