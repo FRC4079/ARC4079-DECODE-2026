@@ -4,6 +4,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.AutoMovements.HeadingLock;
 import frc.robot.FlywheelSubsystem.Flywheel;
 import frc.robot.FlywheelSubsystem.Hood;
@@ -84,9 +85,11 @@ public class PointToPointAutos {
     chooser.setDefaultOption("Do Nothing", Commands.none());
     chooser.addOption("Red Right", RedRight());
     chooser.addOption("Red Left", RedLeft());
+
     chooser.addOption("Simple Red Left", SimpleRedLeft());
     chooser.addOption("Simple Red Right", SimpleRedRight());
     chooser.addOption("Simple Blue Left", SimpleBlueLeft());
+    chooser.addOption("Simple Blue Right", SimpleBlueRight());
 
     SmartDashboard.putData("Auto Chooser", chooser);
   }
@@ -162,51 +165,95 @@ public class PointToPointAutos {
   }
 
   private Command SimpleRedLeft() {
-    return AutoRoutine.create(swerve, localization)
+//    return AutoRoutine.create(swerve, localization)
+//            .startAt(12.84, 0.7, 180.0)
+//            .driveToAll(15.3, 0.8, 180)
+//            .run(startAiming())
+//            .run(startFeeding())
+//            .waitSeconds(3)
+//            .run(stopAll())
+//            .build()
+//            .withName("Red Left");
+
+    return new SequentialCommandGroup(
+            AutoRoutine.create(swerve, localization)
             .startAt(12.84, 0.7, 180.0)
             .driveToAll(15.3, 0.8, 180)
-            .run(startAiming())
-            .run(startFeeding())
-            .waitSeconds(3)
-            .run(stopAll())
-            .build()
-            .withName("Red Left");
+                    .build().withTimeout(3),
+            startAiming().withTimeout(3),
+            startFeeding().withTimeout(3),
+            Commands.waitSeconds(3).withTimeout(3),
+            stopAll()
+    ).withName("Simple Red Left");
   }
 
   private Command SimpleBlueLeft() {
-    return AutoRoutine.create(swerve, localization)
-            .startAt(3.5539205074310303, 7.328, 0)
-            .driveToAll(1.137, 7.11, 0)
-            .run(startAiming())
-            .run(startFeeding())
-            .waitSeconds(3)
-            .run(stopAll())
-            .build()
-            .withName("Simple Blue Left");
+//    return AutoRoutine.create(swerve, localization)
+//            .startAt(3.5539205074310303, 7.328, 0)
+//            .driveToAll(1.137, 7.11, 0)
+//            .run(startAiming())
+//            .run(startFeeding())
+//            .waitSeconds(3)
+//            .run(stopAll())
+//            .build()
+//            .withName("Simple Blue Left");
+
+    return new SequentialCommandGroup(
+            AutoRoutine.create(swerve, localization)
+                    .startAt(3.5539205074310303, 7.328, 0)
+                    .driveToAll(1.137, 7.11, 0)
+                    .build().withTimeout(3),
+            startAiming().withTimeout(3),
+            startFeeding().withTimeout(3),
+            Commands.waitSeconds(3).withTimeout(3),
+            stopAll()
+    ).withName("Simple Blue Left");
   }
 
   private Command SimpleBlueRight() {
-    return AutoRoutine.create(swerve, localization)
-            .startAt(3.592, 0.721, 0)
-            .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
-            .run(startAiming()).
-            .run(startFeeding())
-            .waitSeconds(3)
-            .run(stopAll())
-            .build()
-            .withName("Simple Blue Right");
+//    return AutoRoutine.create(swerve, localization)
+//            .startAt(3.592, 0.721, 0)
+//            .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
+//            .run(startAiming())
+//            .run(startFeeding())
+//            .waitSeconds(3)
+//            .run(stopAll())
+//            .build()
+//            .withName("Simple Blue Right");
+
+    return new SequentialCommandGroup(
+            AutoRoutine.create(swerve, localization)
+                    .startAt(3.592, 0.721, 0)
+                    .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
+                    .build().withTimeout(3),
+            startAiming().withTimeout(3),
+            startFeeding().withTimeout(3),
+            Commands.waitSeconds(3).withTimeout(3),
+            stopAll()
+    ).withName("Simple Blue Right");
   }
 
   private Command SimpleRedRight() {
-    return AutoRoutine.create(swerve, localization)
-            .startAt(13.0, 7.5, 180.0)
-            .driveToAll(15, 6.7,180)
-            .run(startAiming())
-            .run(startFeeding())
-            .waitSeconds(3)
-            .run(stopAll())
-            .build()
-            .withName("Simple Red Right");
+//    return AutoRoutine.create(swerve, localization)
+//            .startAt(13.0, 7.5, 180.0)
+//            .driveToAll(15, 6.7,180)
+//            .run(startAiming())
+//            .run(startFeeding())
+//            .waitSeconds(3)
+//            .run(stopAll())
+//            .build()
+//            .withName("Simple Red Right");
+
+    return new SequentialCommandGroup(
+            AutoRoutine.create(swerve, localization)
+                    .startAt(13.0, 7.5, 180.0)
+                    .driveToAll(15, 6.7,180)
+                    .build().withTimeout(3),
+            startAiming().withTimeout(3),
+            startFeeding().withTimeout(3),
+            Commands.waitSeconds(3).withTimeout(3),
+            stopAll()
+    ).withName("Simple Red Right");
   }
 
   private Command RedLeft() {
