@@ -16,13 +16,12 @@ import frc.robot.util.state_machines.StateMachine;
 public class intaker extends StateMachine<intaker.State> {
 	public enum State { OFF, INTAKE, FEED, REVERSE }
 
-	private static final double INTAKE_POWER = 8.5 * 0.75;
+	private static final double INTAKE_POWER = 4000;
 	private static final double FEED_POWER = 6.5 * 0.75;
 	private static final double REVERSE_POWER = -4 * 0.75;
 
 	private final TalonFX motor;
-		private final VelocityTorqueCurrentFOC mmRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
-
+	private final VelocityTorqueCurrentFOC mmRequest = new VelocityTorqueCurrentFOC(0).withSlot(0);
 
 	public intaker(TalonFX motor) {
 		super(SubsystemPriority.DEPLOY, State.OFF);
@@ -48,7 +47,7 @@ public class intaker extends StateMachine<intaker.State> {
 	@Override
 	protected void afterTransition(State newState) {
 		switch (newState) {
-			case OFF -> motor.setControl(new VoltageOut(0.0));
+			case OFF -> motor.setControl(mmRequest.withVelocity(INTAKE_POWER));
 			case INTAKE -> motor.setControl(new VoltageOut(INTAKE_POWER));
 			case FEED -> motor.setControl(new VoltageOut(FEED_POWER));
 			case REVERSE -> motor.setControl(new VoltageOut(REVERSE_POWER));
