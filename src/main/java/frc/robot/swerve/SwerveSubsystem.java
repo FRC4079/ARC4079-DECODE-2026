@@ -382,6 +382,6 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   public void clearIntakeSpeedMultiplier() {
     intakeRampUpTimer.reset();
     intakeRampUpTimer.start();
-    intakeSpeedMultiplier = 0.75;
+    intakeSpeedMultiplier = 0.625;
   }
 }

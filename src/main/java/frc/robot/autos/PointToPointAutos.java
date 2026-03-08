@@ -167,8 +167,8 @@ public class PointToPointAutos {
   private Command SimpleBlueLeft() {
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
-                    .startAt(3.525, 7.15, 0)
-                    .driveToAll(0.6, 0.8, 0)
+                    .startAt(3.35, 6.85, -45)
+                    .driveToAll(2.5, 5.5, -90)
                     .build().withTimeout(3),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
@@ -193,8 +193,8 @@ public class PointToPointAutos {
     private Command SimpleRedLeft() {
         return new SequentialCommandGroup(
                 AutoRoutine.create(swerve, localization)
-                        .startAt(13, 0.86, 180)
-                        .driveToAll(15.750, 7.400, 180)
+                        .startAt(13.125, 1.275, 135)
+                        .driveToAll(14.250, 2.500, 90)
                         .build().withTimeout(3),
                 startAiming().withTimeout(3),
                 startFeeding().withTimeout(3),

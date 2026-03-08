@@ -22,6 +22,8 @@ public class IntakePosition extends StateMachine<IntakePosition.State> {
 
 	private static final double DEPLOY_ROTATIONS = -4.5;
 
+    private final Timer delayTimer = new Timer;
+
 	private final TalonFX motor;
 	private final MotionMagicTorqueCurrentFOC mmRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);
 
@@ -35,6 +37,7 @@ cfg.Slot0 = new Slot0Configs()
     .withKP(30).withKI(0).withKD(0)
     .withKG(0.3)
     .withKS(0.1);
+
 cfg.MotionMagic = new MotionMagicConfigs()
     .withMotionMagicCruiseVelocity(150.0)
     .withMotionMagicAcceleration(160.0);
@@ -49,6 +52,9 @@ cfg.CurrentLimits = new CurrentLimitsConfigs()
 
 	/** Move elevator to deployed position. */
 	public void deploy()  { setStateFromRequest(State.DEPLOY); }
+
+    public void delay()  { setStateFromRequest(State.DELAY); }
+
 	/** Retract elevator back to boot/zero position. */
 	public void retract() { setStateFromRequest(State.RETRACT); }
 
@@ -58,7 +64,8 @@ cfg.CurrentLimits = new CurrentLimitsConfigs()
 	@Override
 	protected void afterTransition(State newState) {
 		switch (newState) {
-			case OFF     -> motor.setControl(new CoastOut());
+			case OFF -> motor.setControl(new CoastOut());
+            case DELAY -> motor.setControl(new CoastOut());
 			case DEPLOY  -> motor.setControl(mmRequest.withPosition(DEPLOY_ROTATIONS));
 			case RETRACT -> motor.setControl(mmRequest.withPosition(-0.85));
 		}
