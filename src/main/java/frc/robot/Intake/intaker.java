@@ -47,8 +47,8 @@ public class intaker extends StateMachine<intaker.State> {
 	@Override
 	protected void afterTransition(State newState) {
 		switch (newState) {
-			case OFF -> motor.setControl(mmRequest.withVelocity(INTAKE_POWER));
-			case INTAKE -> motor.setControl(new VoltageOut(INTAKE_POWER));
+			case OFF -> motor.setControl(new VoltageOut(0.0));
+ 			case INTAKE -> motor.setControl(mmRequest.withVelocity(INTAKE_POWER));
 			case FEED -> motor.setControl(new VoltageOut(FEED_POWER));
 			case REVERSE -> motor.setControl(new VoltageOut(REVERSE_POWER));
 	}
