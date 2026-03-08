@@ -100,10 +100,13 @@ public class LookupTable extends StateMachine<LookupTable.State> {
 // do your job her
         addShotPoint(new ShotPoint(3.0, 3025, 0));
         addShotPoint(new ShotPoint(3.2, 3200, 0));
+        addShotPoint(new ShotPoint(3.4, 3225, 0));
         addShotPoint(new ShotPoint(3.6, 3350, 0));
         addShotPoint(new ShotPoint(4, 3440, 0));
         addShotPoint(new ShotPoint(4.9, 3825, 0));
-        addShotPoint(new ShotPoint(5.1, 4100, 0));
+        addShotPoint(new ShotPoint(5.1, 3900, 0));
+
+        // 5.1 and 5.2 is the outpost
 
 
         //addTofPoint(4, 0.4);

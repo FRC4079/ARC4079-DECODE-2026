@@ -381,7 +381,7 @@ public class Robot extends TimedRobot {
         hardware.driverController.leftTrigger(0.1).whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
-                            swerve.setIntakeSpeedMultiplier(0.5);
+//                            swerve.setIntakeSpeedMultiplier(0.5);
                             intakePosition.deploy();
                             intakeRoller.intake();
                             hopper.feed();

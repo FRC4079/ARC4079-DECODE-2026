@@ -164,44 +164,11 @@ public class PointToPointAutos {
     });
   }
 
-  private Command SimpleRedLeft() {
-//    return AutoRoutine.create(swerve, localization)
-//            .startAt(12.84, 0.7, 180.0)
-//            .driveToAll(15.3, 0.8, 180)
-//            .run(startAiming())
-//            .run(startFeeding())
-//            .waitSeconds(3)
-//            .run(stopAll())
-//            .build()
-//            .withName("Red Left");
-
-    return new SequentialCommandGroup(
-            AutoRoutine.create(swerve, localization)
-            .startAt(12.84, 0.7, 180.0)
-            .driveToAll(15.3, 0.8, 180)
-                    .build().withTimeout(3),
-            startAiming().withTimeout(3),
-            startFeeding().withTimeout(3),
-            Commands.waitSeconds(3).withTimeout(3),
-            stopAll()
-    ).withName("Simple Red Left");
-  }
-
   private Command SimpleBlueLeft() {
-//    return AutoRoutine.create(swerve, localization)
-//            .startAt(3.5539205074310303, 7.328, 0)
-//            .driveToAll(1.137, 7.11, 0)
-//            .run(startAiming())
-//            .run(startFeeding())
-//            .waitSeconds(3)
-//            .run(stopAll())
-//            .build()
-//            .withName("Simple Blue Left");
-
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
-                    .startAt(3.5539205074310303, 7.328, 0)
-                    .driveToAll(1.137, 7.11, 0)
+                    .startAt(3.525, 7.15, 0)
+                    .driveToAll(0.6, 0.8, 0)
                     .build().withTimeout(3),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
@@ -211,20 +178,10 @@ public class PointToPointAutos {
   }
 
   private Command SimpleBlueRight() {
-//    return AutoRoutine.create(swerve, localization)
-//            .startAt(3.592, 0.721, 0)
-//            .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
-//            .run(startAiming())
-//            .run(startFeeding())
-//            .waitSeconds(3)
-//            .run(stopAll())
-//            .build()
-//            .withName("Simple Blue Right");
-
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
-                    .startAt(3.592, 0.721, 0)
-                    .driveToAll(0.9227703809738159, 0.7992599606513977, 0)
+                    .startAt(3.525, 0.86, 0)
+                    .driveToAll(0.6, 0.8, 0)
                     .build().withTimeout(3),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
@@ -233,21 +190,24 @@ public class PointToPointAutos {
     ).withName("Simple Blue Right");
   }
 
-  private Command SimpleRedRight() {
-//    return AutoRoutine.create(swerve, localization)
-//            .startAt(13.0, 7.5, 180.0)
-//            .driveToAll(15, 6.7,180)
-//            .run(startAiming())
-//            .run(startFeeding())
-//            .waitSeconds(3)
-//            .run(stopAll())
-//            .build()
-//            .withName("Simple Red Right");
+    private Command SimpleRedLeft() {
+        return new SequentialCommandGroup(
+                AutoRoutine.create(swerve, localization)
+                        .startAt(13, 0.86, 180)
+                        .driveToAll(15.750, 7.400, 180)
+                        .build().withTimeout(3),
+                startAiming().withTimeout(3),
+                startFeeding().withTimeout(3),
+                Commands.waitSeconds(3).withTimeout(3),
+                stopAll()
+        ).withName("Simple Red Left");
+    }
 
+  private Command SimpleRedRight() {
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
-                    .startAt(13.0, 7.5, 180.0)
-                    .driveToAll(15, 6.7,180)
+                    .startAt(13.0, 7.15, 180)
+                    .driveToAll(15.750, 7.400, 180)
                     .build().withTimeout(3),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
@@ -255,6 +215,10 @@ public class PointToPointAutos {
             stopAll()
     ).withName("Simple Red Right");
   }
+
+
+
+
 
   private Command RedLeft() {
     return AutoRoutine.create(swerve, localization)
