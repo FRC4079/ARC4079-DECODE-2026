@@ -3,25 +3,25 @@
   "waypoints": [
     {
       "anchor": {
-        "x": 2.0,
-        "y": 7.0
+        "x": 13.104184027777778,
+        "y": 1.312294126157408
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.4008098234953708,
-        "y": 5.69894871238426
+        "x": 14.227567563657407,
+        "y": 1.9769944299768518
       },
       "isLocked": false,
       "linkedName": null
     },
     {
       "anchor": {
-        "x": 3.27,
-        "y": 4.051533854166666
+        "x": 14.743397569444443,
+        "y": 4.061112991898148
       },
       "prevControl": {
-        "x": 3.120211154513889,
-        "y": 5.972675853587963
+        "x": 13.685099681712963,
+        "y": 3.6356286892361114
       },
       "nextControl": null,
       "isLocked": false,
@@ -42,13 +42,13 @@
   },
   "goalEndState": {
     "velocity": 0,
-    "rotation": 0.0
+    "rotation": 180.0
   },
   "reversed": false,
   "folder": "Box of Melon",
   "idealStartingState": {
-    "velocity": 0,
-    "rotation": 0.0
+    "velocity": 0.0,
+    "rotation": 135.0
   },
   "useDefaultConstraints": true
 }

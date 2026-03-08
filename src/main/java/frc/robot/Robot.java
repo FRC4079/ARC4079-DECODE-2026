@@ -6,9 +6,7 @@ import edu.wpi.first.wpilibj.DutyCycle;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.*;
 import frc.robot.imu.ImuSubsystem;
 import frc.robot.localization.LocalizationSubsystem;
 import frc.robot.swerve.SwerveSubsystem;
@@ -381,7 +379,7 @@ public class Robot extends TimedRobot {
         hardware.driverController.leftTrigger(0.1).whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
-//                            swerve.setIntakeSpeedMultiplier(0.5);
+                            swerve.setIntakeSpeedMultiplier(0.5);
                             intakePosition.deploy();
                             intakeRoller.intake();
                             hopper.feed();
@@ -436,11 +434,15 @@ public class Robot extends TimedRobot {
                             if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/RT_ShootMode", shooting);
 
                             if (shooting) {
-                                turretLookup.enable();
-                                headingLock.enableForAlliance();
-                                intakeRoller.intake();
-                                hopper.pulse();
-                                if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/ShootingActive", true);
+                                //check if limelight has a tag and if its our turn to shoot based on alliance color before enabling shoot mode
+                                if (vision.seeingTag()) {
+                                    turretLookup.enable();
+                                    headingLock.enableForAlliance();
+                                    intakeRoller.intake();
+                                    hopper.pulse();
+                                    if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/ShootingActive", true);
+                                }
+
                             } else {
                                 savedRedTarget = headingLock.getRedTargetPoint();
                                 savedBlueTarget = headingLock.getBlueTargetPoint();

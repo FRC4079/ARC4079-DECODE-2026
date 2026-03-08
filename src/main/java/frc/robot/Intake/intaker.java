@@ -1,8 +1,6 @@
 package frc.robot.Intake;
 
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
-import com.ctre.phoenix6.configs.Slot0Configs;
-import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.configs.*;
 import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
@@ -40,9 +38,18 @@ public class intaker extends StateMachine<intaker.State> {
 				.withStatorCurrentLimit(40)
 				.withStatorCurrentLimitEnable(true);
 
+		cfg.ClosedLoopRamps = new ClosedLoopRampsConfigs()
+				.withDutyCycleClosedLoopRampPeriod(0.5)
+				.withTorqueClosedLoopRampPeriod(0.5)
+				.withVoltageClosedLoopRampPeriod(0.5);
+
+		cfg.OpenLoopRamps = new OpenLoopRampsConfigs()
+				.withDutyCycleOpenLoopRampPeriod(0.5)
+				.withTorqueOpenLoopRampPeriod(0.5)
+				.withVoltageOpenLoopRampPeriod(0.5);
 
 		cdgPID = new PhoenixPIDController(3.0, 0.0, 0.0);
-		
+
 		// apply PID gains to slot 0 so the TalonFX uses them for closed-loop control
 		cfg.Slot0 = new Slot0Configs()
 				.withKP(3.0)

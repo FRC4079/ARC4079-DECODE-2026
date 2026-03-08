@@ -72,6 +72,8 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   private double lastSimTime;
   private Notifier simNotifier = null;
 
+  private Timer intakeRampUpTimer = new Timer();
+
   private SwerveDriveState drivetrainState = new SwerveDriveState();
   private ChassisSpeeds robotRelativeSpeeds = new ChassisSpeeds();
   private ChassisSpeeds fieldRelativeSpeeds = new ChassisSpeeds();
@@ -343,6 +345,10 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   @Override
   public void robotPeriodic() {
     super.robotPeriodic();
+    if (intakeRampUpTimer.hasElapsed(0.3)) {
+      intakeSpeedMultiplier = 1.0;
+      intakeRampUpTimer.stop();
+    }
   }
 
   private void startSimThread() {
@@ -374,6 +380,8 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
 
   /** Restores full speed after intaking. */
   public void clearIntakeSpeedMultiplier() {
-    intakeSpeedMultiplier = 1.0;
+    intakeRampUpTimer.reset();
+    intakeRampUpTimer.start();
+    intakeSpeedMultiplier = 0.75;
   }
 }
