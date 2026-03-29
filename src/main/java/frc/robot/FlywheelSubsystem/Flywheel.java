@@ -22,7 +22,7 @@ public class Flywheel {
 	public static final double kP = 3.6;
 
 	
-		public static final double SUPPLY_LIMIT = 60.0;
+	public static final double SUPPLY_LIMIT = 60.0;
 	public static final double STATOR_LIMIT = 80.0;
 	public static final double TORQUE_CURRENT_LIMIT = 80.0;
 

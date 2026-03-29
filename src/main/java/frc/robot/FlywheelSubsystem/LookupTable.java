@@ -72,6 +72,8 @@ public class LookupTable extends StateMachine<LookupTable.State> {
     private static final int DRIVE_FILTER_TAPS = 75;
     private static final double RPM_TOLERANCE      = 75.0;
     private static final double HOOD_TOLERANCE_DEG =  1.0;
+    private static final double MIN_LOOKUP_RPM = 2600.0;
+    private static final double MAX_LOOKUP_RPM = 6500.0;
 
     private final List<ShotPoint> shotPoints = new ArrayList<>();
     private final List<TofPoint>  tofPoints  = new ArrayList<>();
@@ -98,11 +100,13 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.hood         = hood;
 
 // do your job her
-        addShotPoint(new ShotPoint(3.0, 3025, 0));
         addShotPoint(new ShotPoint(3.2, 3200, 0));
         addShotPoint(new ShotPoint(3.4, 3225, 0));
-        addShotPoint(new ShotPoint(3.6, 3350, 0));
+        addShotPoint(new ShotPoint(3.6, 3450, 0));
+        addShotPoint(new ShotPoint(3.7, 3300, 0));
+        addShotPoint(new ShotPoint(3.8, 3500, 0));
         addShotPoint(new ShotPoint(4, 3440, 0));
+        addShotPoint(new ShotPoint(4.3, 3500, 0));
         addShotPoint(new ShotPoint(4.9, 3825, 0));
         addShotPoint(new ShotPoint(5.1, 3900, 0));
 
@@ -201,6 +205,8 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         SmartDashboard.putNumber("Shooter/TargetHoodDeg",     Math.toDegrees(hoodAngleWithOffset));
         SmartDashboard.putNumber("Shooter/TimeOfFlight",      timeOfFlight);
         SmartDashboard.putNumber("Shooter/DriveAngleDeg",     driveAngle.getDegrees());
+        SmartDashboard.putNumber("Shooter/RawDistanceM",      rawDistance);
+        SmartDashboard.putNumber("Shooter/LookaheadDistanceM", lookaheadDistance);
         SmartDashboard.putBoolean("Shooter/IsValid",          valid);
 
         return cachedParameters;
@@ -250,9 +256,23 @@ public class LookupTable extends StateMachine<LookupTable.State> {
 
     private double[] lookupShot(double distanceMeters) {
         if (shotPoints.isEmpty()) return new double[]{0, 0};
+        if (shotPoints.size() == 1) {
+            ShotPoint only = shotPoints.get(0);
+            return new double[]{only.rpm, only.hoodAngleDeg};
+        }
+
         if (distanceMeters <= shotPoints.get(0).distanceMeters) {
-            ShotPoint p = shotPoints.get(0);
-            return new double[]{p.rpm, p.hoodAngleDeg};
+            ShotPoint lo = shotPoints.get(0);
+            ShotPoint hi = shotPoints.get(1);
+            // Extrapolate below first point so close shots still vary with measured distance.
+            double t = (distanceMeters - lo.distanceMeters) / (hi.distanceMeters - lo.distanceMeters);
+            double rpm = lo.rpm + t * (hi.rpm - lo.rpm);
+            rpm = MathUtil.clamp(rpm, MIN_LOOKUP_RPM, MAX_LOOKUP_RPM);
+            double hoodDeg = lo.hoodAngleDeg + t * (hi.hoodAngleDeg - lo.hoodAngleDeg);
+            return new double[]{
+                    rpm,
+                    hoodDeg
+            };
         }
         for (int i = 1; i < shotPoints.size(); i++) {
             ShotPoint lo = shotPoints.get(i - 1), hi = shotPoints.get(i);

@@ -56,6 +56,9 @@ public class Robot extends TimedRobot {
     private static final boolean ENABLE_DASHBOARD = true;
     private Command autonomousCommand = Commands.none();
     private final Hardware hardware = new Hardware();
+    private final edu.wpi.first.wpilibj2.command.button.CommandXboxController coDriverController = hardware.testController;
+    private final edu.wpi.first.wpilibj2.command.button.CommandXboxController diagnosticsController =
+            new edu.wpi.first.wpilibj2.command.button.CommandXboxController(2);
 
     private final SwerveSubsystem swerve = new SwerveSubsystem();
     private final ImuSubsystem imu = new ImuSubsystem(swerve.drivetrainPigeon);
@@ -77,7 +80,7 @@ public class Robot extends TimedRobot {
     private final Hopper hopper = new Hopper(hardware.hopperMotor);
     private final EnterNeutralZone enterNeutralZone = new EnterNeutralZone(localization, trailblazer);
     private final TestController testController = new TestController(
-            hardware.testController,
+            diagnosticsController,
             hood,
             hoodSM,
             flywheel,
@@ -93,6 +96,7 @@ public class Robot extends TimedRobot {
     private final phaseTimer phaseTimer = new phaseTimer();
     private final PointToPointAutos pointToPointAutos;
     private double manualShootRpm = 3900.0;
+    private double autoAlignRpmOffset = 0.0;
     private final Orchestra orchestra = new Orchestra();
     private final edu.wpi.first.math.controller.PIDController trenchYController =
             new edu.wpi.first.math.controller.PIDController(3.0, 0.0, 0.0);
@@ -251,17 +255,17 @@ public class Robot extends TimedRobot {
             if (rumbleStepEndTime == 0) {
                 // Start current step
                 boolean isOn = (rumblePatternIndex % 2) == 0;
-                hardware.driverController.getHID().setRumble(RumbleType.kBothRumble, isOn ? 1.0 : 0.0);
+                setDriverRumble(isOn ? 1.0 : 0.0);
                 rumbleStepEndTime = now + rumblePattern[rumblePatternIndex];
             } else if (now >= rumbleStepEndTime) {
                 rumblePatternIndex++;
                 if (rumblePatternIndex >= rumblePattern.length) {
                     // Pattern done
-                    hardware.driverController.getHID().setRumble(RumbleType.kBothRumble, 0.0);
+                    setDriverRumble(0.0);
                     rumblePattern = null;
                 } else {
                     boolean isOn = (rumblePatternIndex % 2) == 0;
-                    hardware.driverController.getHID().setRumble(RumbleType.kBothRumble, isOn ? 1.0 : 0.0);
+                    setDriverRumble(isOn ? 1.0 : 0.0);
                     rumbleStepEndTime = now + rumblePattern[rumblePatternIndex];
                 }
             }
@@ -334,8 +338,19 @@ public class Robot extends TimedRobot {
     }
 
     private void configureBindings() {
+        var back = anyPressed(hardware.driverController.back(), coDriverController.back());
+        var x = anyPressed(hardware.driverController.x(), coDriverController.x());
+        var b = anyPressed(hardware.driverController.b(), coDriverController.b());
+        var y = anyPressed(hardware.driverController.y(), coDriverController.y());
+        var povUp = anyPressed(hardware.driverController.povUp(), coDriverController.povUp());
+        var povDown = anyPressed(hardware.driverController.povDown(), coDriverController.povDown());
+        var povLeft = anyPressed(hardware.driverController.povLeft(), coDriverController.povLeft());
+        var povRight = anyPressed(hardware.driverController.povRight(), coDriverController.povRight());
+        var leftTrigger = anyPressed(hardware.driverController.leftTrigger(0.1), coDriverController.leftTrigger(0.1));
+        var rightTrigger = anyPressed(hardware.driverController.rightTrigger(0.1), coDriverController.rightTrigger(0.1));
+
         // Back button: reset gyro heading
-        hardware.driverController.back().onTrue(
+        back.onTrue(
                 Commands.runOnce(() -> {
                     double heading = FmsSubsystem.isRedAlliance() ? 180.0 : 0.0;
                     localization.resetGyro(Rotation2d.fromDegrees(heading));
@@ -349,15 +364,15 @@ public class Robot extends TimedRobot {
                                 () -> {
                                     if (DriverStation.isTeleop()) {
                                         swerve.driveTeleop(
-                                                hardware.driverController.getLeftX(),
-                                                hardware.driverController.getLeftY(),
-                                                hardware.driverController.getRightX());
+                                                combineAxis(hardware.driverController.getLeftX(), coDriverController.getLeftX()),
+                                                combineAxis(hardware.driverController.getLeftY(), coDriverController.getLeftY()),
+                                                combineAxis(hardware.driverController.getRightX(), coDriverController.getRightX()));
                                     }
                                 })
                         .withName("DefaultSwerveCommand"));
 
         // X (hold): Index — hopper at 60%, indexer at 60%
-        hardware.driverController.x().whileTrue(
+        x.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
                             hopper.setDutyPercent(0.6);
@@ -371,21 +386,21 @@ public class Robot extends TimedRobot {
         );
 
         // B (hold): Travel to outpost
-        hardware.driverController.b().whileTrue(
+        b.whileTrue(
                 outpost.travelToOutpost()
         );
 
         // Left Trigger (hold): Intake — deploy intake, run rollers + hopper, slow drivetrain 50%
-        hardware.driverController.leftTrigger(0.1).whileTrue(
+        leftTrigger.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
-                            swerve.setIntakeSpeedMultiplier(0.25);
+                            swerve.setIntakeSpeedMultiplier(1.25);
                             intakePosition.delay();
                             intakeRoller.intake();
                             hopper.feed();
                         },
                         () -> {
-                            swerve.clearIntakeSpeedMultiplier();
+                            swerve.setIntakeSpeedMultiplier(1.0);
                             intakePosition.retract();
                             intakeRoller.stop();
                             hopper.stop();
@@ -394,12 +409,14 @@ public class Robot extends TimedRobot {
         );
 
         // Y (hold): Manual shoot — spin flywheel + feed indexer and hopper
-        hardware.driverController.y().whileTrue(
+        y.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.run(() -> {
+                    swerve.setIntakeSpeedMultiplier(0.5);
                     flywheel.spinFlywheel(manualShootRpm);
                     indexer.feed();
                     hopper.feed();
                 }).finallyDo(() -> {
+                    swerve.setIntakeSpeedMultiplier(1.0);
                     flywheel.stop();
                     indexer.stop();
                     hopper.stop();
@@ -407,7 +424,7 @@ public class Robot extends TimedRobot {
         );
 
         // D-pad Up (press): +50 RPM for manual shoot
-        hardware.driverController.povUp().onTrue(
+        povUp.onTrue(
                 Commands.runOnce(() -> {
                     manualShootRpm += 50;
                     if (ENABLE_DASHBOARD) SmartDashboard.putNumber("ManualShoot/TargetRPM", manualShootRpm);
@@ -415,18 +432,33 @@ public class Robot extends TimedRobot {
         );
 
         // D-pad Down (press): -50 RPM for manual shoot
-        hardware.driverController.povDown().onTrue(
+        povDown.onTrue(
                 Commands.runOnce(() -> {
                     manualShootRpm = Math.max(0, manualShootRpm - 50);
                     if (ENABLE_DASHBOARD) SmartDashboard.putNumber("ManualShoot/TargetRPM", manualShootRpm);
                 })
         );
 
+        // D-pad Left/Right (press): tune auto-align lookup RPM offset by -/+50
+        povLeft.onTrue(
+                Commands.runOnce(() -> {
+                    autoAlignRpmOffset -= 50.0;
+                    if (ENABLE_DASHBOARD) SmartDashboard.putNumber("AutoAlign/RpmOffset", autoAlignRpmOffset);
+                })
+        );
+        povRight.onTrue(
+                Commands.runOnce(() -> {
+                    autoAlignRpmOffset += 50.0;
+                    if (ENABLE_DASHBOARD) SmartDashboard.putNumber("AutoAlign/RpmOffset", autoAlignRpmOffset);
+                })
+        );
+
 
         // Right Trigger (hold): Shoot or Pass based on field position
-        hardware.driverController.rightTrigger(0.1).whileTrue(
+        rightTrigger.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
+                            swerve.setIntakeSpeedMultiplier(0.5);
                             double robotX = localization.getPose().getX();
                             boolean isBlue = !FmsSubsystem.isRedAlliance();
                             boolean shooting = isBlue ? (robotX < 5.54) : (robotX >= 11.0);
@@ -434,15 +466,15 @@ public class Robot extends TimedRobot {
                             if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/RT_ShootMode", shooting);
 
                             if (shooting) {
-                                //check if limelight has a tag and if its our turn to shoot based on alliance color before enabling shoot mode
-                                if (vision.seeingTag()) {
-                                    turretLookup.enable();
-                                    headingLock.enableForAlliance();
-                                    intakeRoller.intake();
-                                    hopper.pulse();
-                                    if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/ShootingActive", true);
+                                // Always enable heading/lookup in shoot mode so shoot-on-the-go can snap while translating.
+                                turretLookup.enable();
+                                headingLock.enableForAlliance();
+                                intakeRoller.intake();
+                                hopper.pulse();
+                                if (ENABLE_DASHBOARD) {
+                                    SmartDashboard.putBoolean("Driver/ShootingActive", true);
+                                    SmartDashboard.putBoolean("Driver/ShootModeHasTag", vision.seeingTag());
                                 }
-
                             } else {
                                 savedRedTarget = headingLock.getRedTargetPoint();
                                 savedBlueTarget = headingLock.getBlueTargetPoint();
@@ -461,6 +493,7 @@ public class Robot extends TimedRobot {
                             }
                         },
                         () -> {
+                            swerve.setIntakeSpeedMultiplier(1.0);
                             boolean wasShootMode = rtShootMode;
 
                             if (wasShootMode) {
@@ -489,12 +522,24 @@ public class Robot extends TimedRobot {
                             boolean shootMode = rtShootMode;
 
                             if (shootMode) {
+                                var driveInput = swerve.getControllerValues();
+                                boolean shootOnTheGoActive = driveInput.getNorm() > 0.05;
+                                if (shootOnTheGoActive) {
+                                    headingLock.enableForAlliance();
+                                }
+                                if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/ShootOnTheGoActive", shootOnTheGoActive);
+
                                 if (!turretLookup.hasCachedParameters()) return;
                                 //if () return;
-                                double rpm = turretLookup.getCachedFlywheelRpm();
+                                double baseRpm = turretLookup.getCachedFlywheelRpm();
+                                double rpm = Math.max(0.0, baseRpm + autoAlignRpmOffset);
                                 double hoodRad = turretLookup.getCachedHoodAngleRad();
                                 flywheelSM.requestRpm(rpm);
                                 hoodSM.requestDegrees(Math.toDegrees(hoodRad));
+                                if (ENABLE_DASHBOARD) {
+                                    SmartDashboard.putNumber("AutoAlign/BaseLookupRPM", baseRpm);
+                                    SmartDashboard.putNumber("AutoAlign/AppliedRPM", rpm);
+                                }
                                 if (flywheel.isAtGoal() && headingLock.isSettled()) {
                                     indexer.feed();
                                     hopper.feed();
@@ -515,6 +560,21 @@ public class Robot extends TimedRobot {
                 )
         );
 
+    }
+
+    private edu.wpi.first.wpilibj2.command.button.Trigger anyPressed(
+            edu.wpi.first.wpilibj2.command.button.Trigger primary,
+            edu.wpi.first.wpilibj2.command.button.Trigger secondary) {
+        return primary.or(secondary);
+    }
+
+    private double combineAxis(double primary, double secondary) {
+        return Math.max(-1.0, Math.min(1.0, primary + secondary));
+    }
+
+    private void setDriverRumble(double intensity) {
+        hardware.driverController.getHID().setRumble(RumbleType.kBothRumble, intensity);
+        coDriverController.getHID().setRumble(RumbleType.kBothRumble, intensity);
     }
 
 }

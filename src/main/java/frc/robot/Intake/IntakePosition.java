@@ -6,10 +6,8 @@ import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.CoastOut;
 import com.ctre.phoenix6.controls.MotionMagicTorqueCurrentFOC;
-import com.ctre.phoenix6.controls.MotionMagicVoltage;
 import com.ctre.phoenix6.hardware.TalonFX;
 
-import frc.robot.IndexerSubsystem.Hopper;
 import frc.robot.util.scheduling.SubsystemPriority;
 import frc.robot.util.state_machines.StateMachine;
 
@@ -17,12 +15,12 @@ public class IntakePosition extends StateMachine<IntakePosition.State> {
 	public enum State {
 		OFF,
 		DEPLOY,
+		DELAY,
 		RETRACT
 	}
 
 	private static final double DEPLOY_ROTATIONS = -4.5;
 
-    private final Timer delayTimer = new Timer;
 
 	private final TalonFX motor;
 	private final MotionMagicTorqueCurrentFOC mmRequest = new MotionMagicTorqueCurrentFOC(0).withSlot(0);
