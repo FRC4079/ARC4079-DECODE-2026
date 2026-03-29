@@ -1,5 +1,7 @@
 package frc.robot.autos;
 
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -53,7 +55,17 @@ public class PointToPointAutos {
   private final intaker intakeRoller;
   private final IntakePosition intakePosition;
 
-  private final SendableChooser<Command> chooser = new SendableChooser<>();
+  private static final class AutoChoice {
+    private final Command command;
+    private final Pose2d startPose;
+
+    private AutoChoice(Command command, Pose2d startPose) {
+      this.command = command;
+      this.startPose = startPose;
+    }
+  }
+
+  private final SendableChooser<AutoChoice> chooser = new SendableChooser<>();
 
   public PointToPointAutos(
           SwerveSubsystem swerve,
@@ -82,21 +94,28 @@ public class PointToPointAutos {
     this.intakePosition = intakePosition;
 
     // ===== REGISTER ALL AUTOS HERE =====
-    chooser.setDefaultOption("Do Nothing", Commands.none());
-    chooser.addOption("Red Right", RedRight());
-    chooser.addOption("Red Left", RedLeft());
+    chooser.setDefaultOption("Do Nothing", new AutoChoice(Commands.none(), null));
+    chooser.addOption("Red Right", new AutoChoice(RedRight(), new Pose2d(13.0, 7.5, Rotation2d.fromDegrees(180.0))));
+    chooser.addOption("Red Left", new AutoChoice(RedLeft(), new Pose2d(12.84, 0.7, Rotation2d.fromDegrees(180.0))));
 
-    chooser.addOption("Simple Red Left", SimpleRedLeft());
-    chooser.addOption("Simple Red Right", SimpleRedRight());
-    chooser.addOption("Simple Blue Left", SimpleBlueLeft());
-    chooser.addOption("Simple Blue Right", SimpleBlueRight());
+    chooser.addOption("Simple Red Left", new AutoChoice(SimpleRedLeft(), new Pose2d(13.125, 1.275, Rotation2d.fromDegrees(135))));
+    chooser.addOption("Simple Red Right", new AutoChoice(SimpleRedRight(), new Pose2d(13.0, 7.15, Rotation2d.fromDegrees(180))));
+    chooser.addOption("Simple Blue Left", new AutoChoice(SimpleBlueLeft(), new Pose2d(3.35, 6.85, Rotation2d.fromDegrees(-45))));
+    chooser.addOption("Simple Blue Right", new AutoChoice(SimpleBlueRight(), new Pose2d(3.525, 0.86, Rotation2d.fromDegrees(0))));
 
     SmartDashboard.putData("Auto Chooser", chooser);
   }
 
   /** Get the currently selected auto command from the dashboard chooser. */
   public Command getSelected() {
-    return chooser.getSelected();
+    AutoChoice selected = chooser.getSelected();
+    return selected != null ? selected.command : Commands.none();
+  }
+
+  /** Get the starting pose associated with the selected auto, if one is defined. */
+  public Pose2d getSelectedStartPose() {
+    AutoChoice selected = chooser.getSelected();
+    return selected != null ? selected.startPose : null;
   }
 
   // =====================================================================

@@ -191,6 +191,17 @@ public class Robot extends TimedRobot {
         autonomousCommand = pointToPointAutos.getSelected();
         //autonomousCommand = pointToPointAutos.getPPSelected();
 
+        var selectedStartPose = pointToPointAutos.getSelectedStartPose();
+        if (selectedStartPose != null) {
+            localization.resetPose(selectedStartPose);
+            localization.resetGyro(selectedStartPose.getRotation());
+            if (ENABLE_DASHBOARD) {
+                SmartDashboard.putNumber("Auto/StartPoseX", selectedStartPose.getX());
+                SmartDashboard.putNumber("Auto/StartPoseY", selectedStartPose.getY());
+                SmartDashboard.putNumber("Auto/StartPoseDeg", selectedStartPose.getRotation().getDegrees());
+            }
+        }
+
         CommandScheduler.getInstance().schedule(autonomousCommand);
 
         ElasticLayoutUtil.onEnable();
