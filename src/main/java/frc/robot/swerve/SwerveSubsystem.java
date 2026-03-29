@@ -271,10 +271,10 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
                   .withDriveRequestType(DriveRequestType.OpenLoopVoltage));
         }
       }
-      case TELEOP_SNAPS -> {
-        if (teleopSpeeds.omegaRadiansPerSecond == 0) {
-          drivetrain.setControl(
-              driveToAngle
+       case TELEOP_SNAPS -> {
+         if (Math.abs(teleopSpeeds.omegaRadiansPerSecond) < 0.15) {
+           drivetrain.setControl(
+               driveToAngle
                   .withVelocityX(teleopSpeeds.vxMetersPerSecond)
                   .withVelocityY(teleopSpeeds.vyMetersPerSecond)
                   .withTargetDirection(Rotation2d.fromDegrees(goalSnapAngle))

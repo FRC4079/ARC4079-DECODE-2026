@@ -72,8 +72,6 @@ public class LookupTable extends StateMachine<LookupTable.State> {
     private static final int DRIVE_FILTER_TAPS = 75;
     private static final double RPM_TOLERANCE      = 75.0;
     private static final double HOOD_TOLERANCE_DEG =  1.0;
-    private static final double MIN_LOOKUP_RPM = 2600.0;
-    private static final double MAX_LOOKUP_RPM = 6500.0;
 
     private final List<ShotPoint> shotPoints = new ArrayList<>();
     private final List<TofPoint>  tofPoints  = new ArrayList<>();
@@ -99,16 +97,16 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.flywheel     = flywheel;
         this.hood         = hood;
 
-// do your job her
-        addShotPoint(new ShotPoint(3.2, 3200, 0));
-        addShotPoint(new ShotPoint(3.4, 3225, 0));
-        addShotPoint(new ShotPoint(3.6, 3450, 0));
-        addShotPoint(new ShotPoint(3.7, 3300, 0));
-        addShotPoint(new ShotPoint(3.8, 3500, 0));
-        addShotPoint(new ShotPoint(4, 3440, 0));
-        addShotPoint(new ShotPoint(4.3, 3500, 0));
-        addShotPoint(new ShotPoint(4.9, 3825, 0));
-        addShotPoint(new ShotPoint(5.1, 3900, 0));
+        // Close-to-mid range points so RPM keeps changing as distance changes near the speaker.
+        addShotPoint(new ShotPoint(2.6, 3400, 0));
+        addShotPoint(new ShotPoint(2.9, 3600, 0));
+        addShotPoint(new ShotPoint(3.3, 3725, 0));
+        addShotPoint(new ShotPoint(3.7, 3800, 0));
+        addShotPoint(new ShotPoint(3.8, 3900, 0));
+        addShotPoint(new ShotPoint(4.0, 3840, 0));
+        addShotPoint(new ShotPoint(4.3, 3900, 0));
+        addShotPoint(new ShotPoint(4.9, 4225, 0));
+        addShotPoint(new ShotPoint(5.1, 4400, 0));
 
         // 5.1 and 5.2 is the outpost
 
@@ -261,18 +259,10 @@ public class LookupTable extends StateMachine<LookupTable.State> {
             return new double[]{only.rpm, only.hoodAngleDeg};
         }
 
+        // Clamp below the first tuned point instead of extrapolating.
         if (distanceMeters <= shotPoints.get(0).distanceMeters) {
-            ShotPoint lo = shotPoints.get(0);
-            ShotPoint hi = shotPoints.get(1);
-            // Extrapolate below first point so close shots still vary with measured distance.
-            double t = (distanceMeters - lo.distanceMeters) / (hi.distanceMeters - lo.distanceMeters);
-            double rpm = lo.rpm + t * (hi.rpm - lo.rpm);
-            rpm = MathUtil.clamp(rpm, MIN_LOOKUP_RPM, MAX_LOOKUP_RPM);
-            double hoodDeg = lo.hoodAngleDeg + t * (hi.hoodAngleDeg - lo.hoodAngleDeg);
-            return new double[]{
-                    rpm,
-                    hoodDeg
-            };
+            ShotPoint p = shotPoints.get(0);
+            return new double[]{p.rpm, p.hoodAngleDeg};
         }
         for (int i = 1; i < shotPoints.size(); i++) {
             ShotPoint lo = shotPoints.get(i - 1), hi = shotPoints.get(i);
