@@ -44,9 +44,11 @@ public final class FieldPoints {
   public static final double LEFT_TRENCH_Y_THRESHOLD = 1.3;
   public static final double LEFT_TRENCH_Y_LOCK = 0.6;
 
-  // Pass target points
-  public static final Translation2d PASS_TARGET_RIGHT = new Translation2d(14.0, 7.0);
-  public static final Translation2d PASS_TARGET_LEFT  = new Translation2d(14.0, 3.5);
+  // Pass target points per alliance
+  public static final Translation2d PASS_TARGET_RED_RIGHT  = new Translation2d(14.0, 7.0);
+  public static final Translation2d PASS_TARGET_RED_LEFT   = new Translation2d(14.0, 3.5);
+  public static final Translation2d PASS_TARGET_BLUE_RIGHT = new Translation2d(2.54, 7.0);
+  public static final Translation2d PASS_TARGET_BLUE_LEFT  = new Translation2d(2.54, 3.5);
 
   // Y approach zones — ramp assist in as driver approaches trench Y threshold
   // Right trench: approach starts at 5.5, full lock at 6.8

@@ -19,7 +19,8 @@ public class Hardware {
   public final TalonFX hoodMotor         = new TalonFX(5);   // shooter hood
   public final TalonFX indexerMotor      = new TalonFX(7);   // indexer
   public final TalonFX intakePivotMotor  = new TalonFX(2);   // intake pivot
-  public final TalonFX intakeRollerMotor = new TalonFX(16);  // intake rollers
+  public final TalonFX intakeRollerMotorA = new TalonFX(16);  // intake roller A
+  public final TalonFX intakeRollerMotorB = new TalonFX(17);  // intake roller B
 
   public final Limelight leftLimelight  = new Limelight("left",  LimelightState.TAGS, LimelightModel.FOUR);
   public final Limelight rightLimelight = new Limelight("right", LimelightState.TAGS, LimelightModel.FOUR);

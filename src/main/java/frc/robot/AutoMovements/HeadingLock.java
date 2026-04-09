@@ -36,7 +36,7 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
   private static final double MT1_MIN_TAG_AREA = 0;       // reject if avg tag area too small (too far away)
   private boolean mt1HeadingCorrectionEnabled = true;
   private boolean mt1RightHeadingCorrectionEnabled = false;
-  private static final double HEADING_TOLERANCE_DEG = 4.5;
+  private static final double HEADING_TOLERANCE_DEG = 2.0;
   private double lastTargetAngleDeg = 0.0;
   private static final double HEADING_SETTLE_TIME_S = 0;
   private double headingOnTargetStartTime = 0;
@@ -346,12 +346,16 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
 
   /** Returns true if the robot heading is within tolerance of the heading lock target. */
   public boolean isOnTarget() {
+    return isOnTarget(HEADING_TOLERANCE_DEG);
+  }
+
+  public boolean isOnTarget(double toleranceDeg) {
     if (getState() == HeadingLockState.DISABLED) return false;
     double currentDeg = localization.getPose().getRotation().getDegrees();
     double error = lastTargetAngleDeg - currentDeg;
     // Normalize to [-180, 180]
     error = ((error + 180.0) % 360.0 + 360.0) % 360.0 - 180.0;
-    boolean onTarget = Math.abs(error) <= HEADING_TOLERANCE_DEG;
+    boolean onTarget = Math.abs(error) <= toleranceDeg;
     SmartDashboard.putBoolean("HeadingLock/OnTarget", onTarget);
     SmartDashboard.putNumber("HeadingLock/HeadingErrorDeg", error);
 
@@ -367,9 +371,13 @@ public class HeadingLock extends StateMachine<HeadingLock.HeadingLockState> {
     return onTarget;
   }
 
-  /** Returns true if heading has been on target continuously for the settle time (1s). */
+  /** Returns true if heading has been on target continuously for the settle time. */
   public boolean isSettled() {
-    boolean onTarget = isOnTarget();
+    return isSettled(HEADING_TOLERANCE_DEG);
+  }
+
+  public boolean isSettled(double toleranceDeg) {
+    boolean onTarget = isOnTarget(toleranceDeg);
     if (!onTarget || headingOnTargetStartTime < 0) {
       SmartDashboard.putBoolean("HeadingLock/Settled", false);
       return false;

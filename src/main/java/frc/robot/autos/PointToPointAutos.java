@@ -1,5 +1,6 @@
 package frc.robot.autos;
 
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -100,6 +101,7 @@ public class PointToPointAutos {
 
     chooser.addOption("Simple Red Left", new AutoChoice(SimpleRedLeft(), new Pose2d(13.125, 1.275, Rotation2d.fromDegrees(135))));
     chooser.addOption("Simple Red Right", new AutoChoice(SimpleRedRight(), new Pose2d(13.0, 7.15, Rotation2d.fromDegrees(180))));
+    chooser.addOption("Center Drive Back + Shoot", new AutoChoice(CenterBackTimedShoot(), new Pose2d(16.125, 7.7, Rotation2d.fromDegrees(0.0))));
     chooser.addOption("Simple Blue Left", new AutoChoice(SimpleBlueLeft(), new Pose2d(3.35, 6.85, Rotation2d.fromDegrees(-45))));
     chooser.addOption("Simple Blue Right", new AutoChoice(SimpleBlueRight(), new Pose2d(3.525, 0.86, Rotation2d.fromDegrees(0))));
 
@@ -139,12 +141,17 @@ public class PointToPointAutos {
   }
 
   private Command startFeeding() {
-    return Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled())
-            .andThen(Commands.runOnce(() -> {
-              indexer.feed();
-              hopper.feed();
-            }))
-            .withName("WaitThenFeed");
+//    return Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled())
+//            .andThen(Commands.runOnce(() -> {
+//              indexer.feed();
+//              hopper.feed();
+//            }))
+//            .withName("WaitThenFeed");
+
+    return Commands.runOnce(() -> {
+      indexer.feed();
+      hopper.feed();
+    });
   }
 
   private Command stopFeeding() {
@@ -189,6 +196,7 @@ public class PointToPointAutos {
                     .startAt(3.35, 6.85, -45)
                     .driveToAll(2.5, 5.5, -90)
                     .build().withTimeout(3),
+            Commands.waitSeconds(1).withTimeout(1),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
             Commands.waitSeconds(3).withTimeout(3),
@@ -200,8 +208,9 @@ public class PointToPointAutos {
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
                     .startAt(3.525, 0.86, 0)
-                    .driveToAll(0.6, 0.8, 0)
+                    .driveToAll(0.375, 0.375, 0)
                     .build().withTimeout(3),
+            Commands.waitSeconds(1).withTimeout(1),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
             Commands.waitSeconds(3).withTimeout(3),
@@ -215,6 +224,7 @@ public class PointToPointAutos {
                         .startAt(13.125, 1.275, 135)
                         .driveToAll(14.250, 2.500, 90)
                         .build().withTimeout(3),
+                Commands.waitSeconds(1).withTimeout(1),
                 startAiming().withTimeout(3),
                 startFeeding().withTimeout(3),
                 Commands.waitSeconds(3).withTimeout(3),
@@ -226,13 +236,31 @@ public class PointToPointAutos {
     return new SequentialCommandGroup(
             AutoRoutine.create(swerve, localization)
                     .startAt(13.0, 7.15, 180)
-                    .driveToAll(15.750, 7.400, 180)
+                    .driveToAll(16.125, 7.7, 180)
                     .build().withTimeout(3),
+            Commands.waitSeconds(1).withTimeout(1),
             startAiming().withTimeout(3),
             startFeeding().withTimeout(3),
             Commands.waitSeconds(3).withTimeout(3),
             stopAll()
     ).withName("Simple Red Right");
+  }
+
+  private Command CenterBackTimedShoot() {
+    double backupSpeed = -SwerveSubsystem.MaxSpeed * 0.25;
+    return new SequentialCommandGroup(
+            Commands.run(
+                    () -> swerve.setRobotRelativeAutoSpeeds(new ChassisSpeeds(backupSpeed, 0.0, 0.0)),
+                    swerve)
+                    .withTimeout(2.5),
+            Commands.runOnce(() -> swerve.setRobotRelativeAutoSpeeds(new ChassisSpeeds()), swerve),
+            startAiming().withTimeout(3),
+            Commands.runOnce(() -> flywheelSM.requestRpm(3200.0)),
+            Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled()).withTimeout(3.0),
+            startFeeding().withTimeout(1.0),
+            Commands.waitSeconds(6).withTimeout(6),
+            stopAll())
+            .withName("Center Drive Back + Shoot");
   }
 
 

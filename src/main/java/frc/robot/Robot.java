@@ -5,6 +5,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DutyCycle;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj2.command.*;
 import frc.robot.imu.ImuSubsystem;
@@ -71,7 +72,7 @@ public class Robot extends TimedRobot {
     private final Flywheel flywheel = new Flywheel(hardware.flywheelA1, hardware.flywheelA2);
     private final Hood hood = new Hood(hardware.hoodMotor);
     private final LookupTable turretLookup = new LookupTable(distanceCalc, flywheel, hood);
-    private final intaker intakeRoller = new intaker(hardware.intakeRollerMotor);
+    private final intaker intakeRoller = new intaker(hardware.intakeRollerMotorA, hardware.intakeRollerMotorB);
     private final IntakePosition intakePosition = new IntakePosition(hardware.intakePivotMotor);
     private final OutpostSetpoint outpost = new OutpostSetpoint(localization, swerve, intakePosition, intakeRoller);
     private final FlywheelStateMachine flywheelSM = new FlywheelStateMachine(flywheel);
@@ -98,11 +99,11 @@ public class Robot extends TimedRobot {
     private double manualShootRpm = 3900.0;
     private double autoAlignRpmOffset = 0.0;
     private final Orchestra orchestra = new Orchestra();
-    private final edu.wpi.first.math.controller.PIDController trenchYController =
-            new edu.wpi.first.math.controller.PIDController(3.0, 0.0, 0.0);
+    private final edu.wpi.first.math.controller.PIDController trenchYController = new edu.wpi.first.math.controller.PIDController(3.0, 0.0, 0.0);
     private Translation2d savedRedTarget;
     private Translation2d savedBlueTarget;
     private Translation2d activePassTarget;
+    private static final double PASS_HEADING_TOLERANCE_DEG = 15.0;
     private boolean rtShootMode = true;
     private phaseTimer.Phase lastPhase = null;
     private boolean warningRumbleSent = false;
@@ -126,7 +127,8 @@ public class Robot extends TimedRobot {
         orchestra.addInstrument(hardware.hoodMotor);
         orchestra.addInstrument(hardware.indexerMotor);
         orchestra.addInstrument(hardware.intakePivotMotor);
-        orchestra.addInstrument(hardware.intakeRollerMotor);
+        orchestra.addInstrument(hardware.intakeRollerMotorA);
+        orchestra.addInstrument(hardware.intakeRollerMotorB);
         orchestra.loadMusic("output.chrp");
 
         headingLock.setRedTargetPoint(FieldPoints.getHeadingLockRedPoint());
@@ -193,14 +195,17 @@ public class Robot extends TimedRobot {
 
         var selectedStartPose = pointToPointAutos.getSelectedStartPose();
         if (selectedStartPose != null) {
-            localization.resetPose(selectedStartPose);
-            localization.resetGyro(selectedStartPose.getRotation());
+            Pose2d zeroHeadingStartPose = new Pose2d(
+                    selectedStartPose.getTranslation(),
+                    Rotation2d.fromDegrees(0.0));
+            localization.resetPose(zeroHeadingStartPose);
             if (ENABLE_DASHBOARD) {
-                SmartDashboard.putNumber("Auto/StartPoseX", selectedStartPose.getX());
-                SmartDashboard.putNumber("Auto/StartPoseY", selectedStartPose.getY());
-                SmartDashboard.putNumber("Auto/StartPoseDeg", selectedStartPose.getRotation().getDegrees());
+                SmartDashboard.putNumber("Auto/StartPoseX", zeroHeadingStartPose.getX());
+                SmartDashboard.putNumber("Auto/StartPoseY", zeroHeadingStartPose.getY());
+                SmartDashboard.putNumber("Auto/StartPoseDeg", 0.0);
             }
         }
+        localization.resetGyro(Rotation2d.fromDegrees(0.0));
 
         CommandScheduler.getInstance().schedule(autonomousCommand);
 
@@ -346,6 +351,22 @@ public class Robot extends TimedRobot {
             flywheelSM.requestOff();
             hoodSM.requestOff();
         }));
+
+        // Auto: wait for shooter + heading lock to be ready, then feed for 6s.
+        NamedCommands.registerCommand(
+                "AutoAlignFeedWhenReady",
+                Commands.sequence(
+                        Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled()),
+                        Commands.startEnd(
+                                () -> {
+                                    indexer.feed();
+                                    hopper.feed();
+                                },
+                                () -> {
+                                    indexer.stop();
+                                    hopper.stop();
+                                })
+                                .withTimeout(6.0)));
     }
 
     private void configureBindings() {
@@ -353,6 +374,7 @@ public class Robot extends TimedRobot {
         var x = anyPressed(hardware.driverController.x(), coDriverController.x());
         var b = anyPressed(hardware.driverController.b(), coDriverController.b());
         var y = anyPressed(hardware.driverController.y(), coDriverController.y());
+        var a = anyPressed(hardware.driverController.a(), coDriverController.a());
         var povUp = anyPressed(hardware.driverController.povUp(), coDriverController.povUp());
         var povDown = anyPressed(hardware.driverController.povDown(), coDriverController.povDown());
         var povLeft = anyPressed(hardware.driverController.povLeft(), coDriverController.povLeft());
@@ -393,6 +415,14 @@ public class Robot extends TimedRobot {
                             hopper.stop();
                             indexer.stop();
                         }
+                )
+        );
+
+        // A (hold): reverse intake
+        a.whileTrue(
+                Commands.startEnd(
+                        intakeRoller::reverse,
+                        intakeRoller::feed
                 )
         );
 
@@ -469,7 +499,7 @@ public class Robot extends TimedRobot {
         rightTrigger.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
-                            swerve.setIntakeSpeedMultiplier(0.5);
+                            swerve.setIntakeSpeedMultiplier(0.25);
                             double robotX = localization.getPose().getX();
                             boolean isBlue = !FmsSubsystem.isRedAlliance();
                             boolean shooting = isBlue ? (robotX < 5.54) : (robotX >= 11.0);
@@ -490,14 +520,7 @@ public class Robot extends TimedRobot {
                                 savedRedTarget = headingLock.getRedTargetPoint();
                                 savedBlueTarget = headingLock.getBlueTargetPoint();
 
-                                Translation2d robotPos = localization.getPose().getTranslation();
-                                double distRight = robotPos.getDistance(FieldPoints.PASS_TARGET_RIGHT);
-                                double distLeft = robotPos.getDistance(FieldPoints.PASS_TARGET_LEFT);
-                                activePassTarget = distRight < distLeft
-                                        ? FieldPoints.PASS_TARGET_RIGHT : FieldPoints.PASS_TARGET_LEFT;
-
-                                headingLock.setRedTargetPoint(activePassTarget);
-                                headingLock.setBlueTargetPoint(activePassTarget);
+                                updatePassTargets(isBlue);
                                 headingLock.enableForAlliance();
                                 hopper.pulse();
                                 if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/PassingActive", true);
@@ -556,6 +579,10 @@ public class Robot extends TimedRobot {
                                     hopper.feed();
                                 }
                             } else {
+                                boolean isBlue = !FmsSubsystem.isRedAlliance();
+                                headingLock.enableForAlliance();
+                                updatePassTargets(isBlue);
+
                                 double dist = localization.getPose().getTranslation().getDistance(activePassTarget);
                                 double rpm = LookupTable.getPassRpm(dist);
                                 flywheel.spinFlywheel(rpm);
@@ -564,8 +591,18 @@ public class Robot extends TimedRobot {
                                     SmartDashboard.putNumber("Pass/Distance", dist);
                                     SmartDashboard.putNumber("Pass/RPM", rpm);
                                 }
-                                indexer.feed();
-                                hopper.feed();
+                                boolean passReady = headingLock.isSettled(PASS_HEADING_TOLERANCE_DEG);
+                                if (ENABLE_DASHBOARD) {
+                                    SmartDashboard.putBoolean("Driver/PassReady", passReady);
+                                    SmartDashboard.putNumber("Driver/PassHeadingToleranceDeg", PASS_HEADING_TOLERANCE_DEG);
+                                }
+                                if (passReady) {
+                                    indexer.feed();
+                                    hopper.feed();
+                                } else {
+                                    indexer.stop();
+                                    hopper.stop();
+                                }
                             }
                         })
                 )
@@ -581,6 +618,30 @@ public class Robot extends TimedRobot {
 
     private double combineAxis(double primary, double secondary) {
         return Math.max(-1.0, Math.min(1.0, primary + secondary));
+    }
+
+    private void updatePassTargets(boolean isBlue) {
+        Translation2d robotPos = localization.getPose().getTranslation();
+
+        double distRedRight = robotPos.getDistance(FieldPoints.PASS_TARGET_RED_RIGHT);
+        double distRedLeft = robotPos.getDistance(FieldPoints.PASS_TARGET_RED_LEFT);
+        Translation2d redPassTarget = distRedRight < distRedLeft
+                ? FieldPoints.PASS_TARGET_RED_RIGHT : FieldPoints.PASS_TARGET_RED_LEFT;
+
+        double distBlueRight = robotPos.getDistance(FieldPoints.PASS_TARGET_BLUE_RIGHT);
+        double distBlueLeft = robotPos.getDistance(FieldPoints.PASS_TARGET_BLUE_LEFT);
+        Translation2d bluePassTarget = distBlueRight < distBlueLeft
+                ? FieldPoints.PASS_TARGET_BLUE_RIGHT : FieldPoints.PASS_TARGET_BLUE_LEFT;
+
+        activePassTarget = isBlue ? bluePassTarget : redPassTarget;
+        headingLock.setRedTargetPoint(redPassTarget);
+        headingLock.setBlueTargetPoint(bluePassTarget);
+
+        if (ENABLE_DASHBOARD) {
+            SmartDashboard.putString("Driver/PassingAlliance", isBlue ? "Blue" : "Red");
+            SmartDashboard.putNumber("Driver/PassTargetX", activePassTarget.getX());
+            SmartDashboard.putNumber("Driver/PassTargetY", activePassTarget.getY());
+        }
     }
 
     private void setDriverRumble(double intensity) {

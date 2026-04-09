@@ -15,7 +15,7 @@ import frc.robot.swerve.SwerveSubsystem;
 public class DriveToPose extends Command {
   private static final double MAX_SPEED = 3.0; 
   private static final double DRIVE_TOLERANCE = 0.5; 
-  private static final double THETA_TOLERANCE = 5.0; 
+  private static final double THETA_TOLERANCE = 2.0;
 
   private static final double PHASE_TRANSITION_Y_TOLERANCE = 0.4; 
   private static final double PHASE_TRANSITION_THETA_TOLERANCE = 15.0; 
@@ -27,7 +27,7 @@ public class DriveToPose extends Command {
   private final Supplier<Pose2d> targetSupplier;
   private final PIDController xController = new PIDController(4.0, 0.0, 0.0);
   private final PIDController yController = new PIDController(4.0, 0.0, 0.0);
-  private final PIDController thetaController = new PIDController(4.0, 0.0, 0.1);
+  private final PIDController thetaController = new PIDController(5.0, 0.0, 0.1);
 
   private final boolean simultaneous;
 

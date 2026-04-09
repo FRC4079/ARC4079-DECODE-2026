@@ -98,15 +98,16 @@ public class LookupTable extends StateMachine<LookupTable.State> {
         this.hood         = hood;
 
         // Close-to-mid range points so RPM keeps changing as distance changes near the speaker.
-        addShotPoint(new ShotPoint(2.6, 3400, 0));
-        addShotPoint(new ShotPoint(2.9, 3600, 0));
-        addShotPoint(new ShotPoint(3.3, 3725, 0));
-        addShotPoint(new ShotPoint(3.7, 3800, 0));
-        addShotPoint(new ShotPoint(3.8, 3900, 0));
-        addShotPoint(new ShotPoint(4.0, 3840, 0));
-        addShotPoint(new ShotPoint(4.3, 3900, 0));
-        addShotPoint(new ShotPoint(4.9, 4225, 0));
-        addShotPoint(new ShotPoint(5.1, 4400, 0));
+        addShotPoint(new ShotPoint(2.3, 2950, 0));
+        addShotPoint(new ShotPoint(2.6, 3150, 0));
+        addShotPoint(new ShotPoint(2.9, 3300, 0));
+        addShotPoint(new ShotPoint(3.3, 3425, 0));
+        addShotPoint(new ShotPoint(3.7, 3500, 0));
+        addShotPoint(new ShotPoint(3.8, 3500, 0));
+        addShotPoint(new ShotPoint(4.0, 3550, 0));
+        addShotPoint(new ShotPoint(4.3, 3600, 0));
+        addShotPoint(new ShotPoint(4.9, 3650, 0));
+        addShotPoint(new ShotPoint(5.1, 3750, 0));
 
         // 5.1 and 5.2 is the outpost
 
