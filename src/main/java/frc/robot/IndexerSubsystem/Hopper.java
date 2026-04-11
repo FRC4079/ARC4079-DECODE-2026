@@ -29,7 +29,7 @@ public class Hopper extends StateMachine<Hopper.HopperState> {
     super(SubsystemPriority.DEPLOY, HopperState.OFF);
     var cfg = new TalonFXConfiguration();
 		cfg.CurrentLimits = new CurrentLimitsConfigs()
-				.withSupplyCurrentLimit(20)
+				.withSupplyCurrentLimit(30)
 				.withSupplyCurrentLimitEnable(true)
 				.withStatorCurrentLimit(40)
 				.withStatorCurrentLimitEnable(true);

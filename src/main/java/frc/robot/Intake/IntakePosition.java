@@ -68,9 +68,9 @@ cfg.MotionMagic = new MotionMagicConfigs()
 	.withMotionMagicCruiseVelocity(150.0 * PIVOT_SPEED_SCALE)
 	.withMotionMagicAcceleration(160.0 * PIVOT_SPEED_SCALE);
 cfg.CurrentLimits = new CurrentLimitsConfigs()
-    .withSupplyCurrentLimit(60)
+    .withSupplyCurrentLimit(40)
     .withSupplyCurrentLimitEnable(true)
-    .withStatorCurrentLimit(160)
+    .withStatorCurrentLimit(60)
     .withStatorCurrentLimitEnable(true);
 	motor.getConfigurator().apply(cfg);
 		motor.setPosition(0.0);

@@ -30,7 +30,7 @@ public class Hood {
 						.withMotionMagicCruiseVelocity(80.0)
 						.withMotionMagicAcceleration(100.0);
 		cfg.CurrentLimits = new CurrentLimitsConfigs()
-				.withSupplyCurrentLimit(20.0)
+				.withSupplyCurrentLimit(30.0)
 				.withSupplyCurrentLimitEnable(true)
 				.withStatorCurrentLimit(40.0)
 				.withStatorCurrentLimitEnable(true);

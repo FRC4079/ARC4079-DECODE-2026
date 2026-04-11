@@ -1,5 +1,7 @@
 package frc.robot.IndexerSubsystem;
 
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
+import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 import frc.robot.util.scheduling.SubsystemPriority;
@@ -11,12 +13,21 @@ public class Indexer extends StateMachine<Indexer.IndexerState> {
   public static final double INTAKE_POWER = 1;
   public static final double FEED_POWER = 1;
   public static final double REVERSE_POWER = -0.5;
+  private static final double SUPPLY_CURRENT_LIMIT_AMPS = 30.0;
+  private static final double STATOR_CURRENT_LIMIT_AMPS = 40.0;
 
   private final TalonFX Indexer;
   private double dutyPercent = FEED_POWER;
 
   public Indexer(TalonFX Indexer) {
     super(SubsystemPriority.DEPLOY, IndexerState.OFF);
+    var cfg = new TalonFXConfiguration();
+    cfg.CurrentLimits = new CurrentLimitsConfigs()
+        .withSupplyCurrentLimit(SUPPLY_CURRENT_LIMIT_AMPS)
+        .withSupplyCurrentLimitEnable(true)
+        .withStatorCurrentLimit(STATOR_CURRENT_LIMIT_AMPS)
+        .withStatorCurrentLimitEnable(true);
+    Indexer.getConfigurator().apply(cfg);
     this.Indexer = Indexer;
   }
 

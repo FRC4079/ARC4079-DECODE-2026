@@ -57,9 +57,9 @@ public class CompBotTunerConstants {
     private static final TalonFXConfiguration driveInitialConfigs = new TalonFXConfiguration()
         .withCurrentLimits(
             new CurrentLimitsConfigs()
-                .withSupplyCurrentLimit(Amps.of(50))
+                .withSupplyCurrentLimit(Amps.of(60))
                 .withSupplyCurrentLimitEnable(true)
-                .withStatorCurrentLimit(Amps.of(50))
+                .withStatorCurrentLimit(Amps.of(70))
                 .withStatorCurrentLimitEnable(true)
         );
     private static final TalonFXConfiguration steerInitialConfigs = new TalonFXConfiguration()
