@@ -252,12 +252,10 @@ public class PointToPointAutos {
             Commands.run(
                     () -> swerve.setRobotRelativeAutoSpeeds(new ChassisSpeeds(backupSpeed, 0.0, 0.0)),
                     swerve)
-                    .withTimeout(2.5),
+                    .withTimeout(2.0),
             Commands.runOnce(() -> swerve.setRobotRelativeAutoSpeeds(new ChassisSpeeds()), swerve),
             startAiming().withTimeout(3),
-            Commands.runOnce(() -> flywheelSM.requestRpm(3200.0)),
-            Commands.waitUntil(() -> flywheel.isAtGoal() && headingLock.isSettled()).withTimeout(3.0),
-            startFeeding().withTimeout(1.0),
+            startFeeding().withTimeout(3),
             Commands.waitSeconds(6).withTimeout(6),
             stopAll())
             .withName("Center Drive Back + Shoot");
@@ -323,6 +321,62 @@ public class PointToPointAutos {
             .withName("Red Right");
   }
 
+  private Command BlueRight() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(3.7, 0.7, 0.0)
+            .driveToAll(7.74, 0.7, 270)
+            .run(startIntaking())
+            .driveToAll(7.74, 3.6, 270)
+            .driveToAll(7.74, 0.7, 128.44)
+            .run(stopIntaking())
+            .driveToAll(1.24, 0.8, 0.0)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .run(stopAiming())
+            .run(stopFeeding())
+            .driveToAll(7.74, 0.7, 270)
+            .run(startIntaking())
+            .driveToAll(7.74, 3.6, 270)
+            .driveToAll(7.74, 0.7, 0.0)
+            .run(stopIntaking())
+            .driveToAll(1.24, 0.7, 128.44)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .run(stopAll())
+            .build()
+            .withName("Blue Right");
+  }
+
+  private Command BlueLeft() {
+    return AutoRoutine.create(swerve, localization)
+            .startAt(3.54, 7.5, 0.0)
+            .driveToAll(7.54, 7.5, 90)
+            .run(startIntaking())
+            .driveToAll(7.54, 4.6, 90)
+            .driveToAll(7.54, 7.45, 0.0)
+            .run(stopIntaking())
+            .driveToAll(3.34, 7.5, 0.0)
+            .driveToAll(1.54, 6.7, 0.0)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(3)
+            .driveToAll(3.54, 7.5, 0.0)
+            .driveToAll(7.54, 7.5, 90)
+            .run(startIntaking())
+            .driveToAll(7.54, 4.6, 90)
+            .driveToAll(7.54, 7.45, 0.0)
+            .run(stopIntaking())
+            .driveToAll(3.34, 7.5, 0.0)
+            .driveToAll(0.29, 7.291, 0.0)
+            .run(startAiming())
+            .run(startFeeding())
+            .waitSeconds(5)
+            .run(stopAll())
+            .build()
+            .withName("Blue Left");
+  }
 
 
 

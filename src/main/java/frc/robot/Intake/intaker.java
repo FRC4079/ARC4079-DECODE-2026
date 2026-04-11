@@ -5,10 +5,12 @@ import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.OpenLoopRampsConfigs;
 import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.Follower;
 import com.ctre.phoenix6.controls.VelocityTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.VoltageOut;
 import com.ctre.phoenix6.hardware.TalonFX;
 
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import frc.robot.util.scheduling.SubsystemPriority;
 import frc.robot.util.state_machines.StateMachine;
 
@@ -31,9 +33,9 @@ public class intaker extends StateMachine<intaker.State> {
 		var cfg = new TalonFXConfiguration();
 
 		cfg.CurrentLimits = new CurrentLimitsConfigs()
-				.withSupplyCurrentLimit(20)
+				.withSupplyCurrentLimit(40)
 				.withSupplyCurrentLimitEnable(true)
-				.withStatorCurrentLimit(40)
+				.withStatorCurrentLimit(60)
 				.withStatorCurrentLimitEnable(true);
 
 		cfg.ClosedLoopRamps = new ClosedLoopRampsConfigs()
@@ -42,9 +44,9 @@ public class intaker extends StateMachine<intaker.State> {
 				.withVoltageClosedLoopRampPeriod(0.5);
 
 		cfg.OpenLoopRamps = new OpenLoopRampsConfigs()
-				.withDutyCycleOpenLoopRampPeriod(0.5)
-				.withTorqueOpenLoopRampPeriod(0.5)
-				.withVoltageOpenLoopRampPeriod(0.5);
+				.withDutyCycleOpenLoopRampPeriod(0.2)
+				.withTorqueOpenLoopRampPeriod(0.2)
+				.withVoltageOpenLoopRampPeriod(0.2);
 
 		cfg.Slot0 = new Slot0Configs()
 				.withKP(3.0)
@@ -52,7 +54,11 @@ public class intaker extends StateMachine<intaker.State> {
 				.withKD(0.0);
 
 		motorA.getConfigurator().apply(cfg);
+
+
+
 		motorB.getConfigurator().apply(cfg);
+		motorB.setControl(new Follower(motorA.getDeviceID(), MotorAlignmentValue.Opposed));
 	}
 
 	public void intake() { setStateFromRequest(State.INTAKE); }
@@ -68,19 +74,20 @@ public class intaker extends StateMachine<intaker.State> {
 		switch (newState) {
 			case OFF -> {
 				motorA.setControl(new VoltageOut(0.0));
-				motorB.setControl(new VoltageOut(0.0));
+//				motorB.setControl(new VoltageOut(0.0));
 			}
 			case INTAKE -> {
-				motorA.setControl(mmRequest.withVelocity(INTAKE_POWER));
-				motorB.setControl(mmRequest.withVelocity(INTAKE_POWER));
+				motorA.setControl(new VoltageOut(10));
+//				motorA.setControl(mmRequest.withVelocity(INTAKE_POWER));
+//				motorB.setControl(mmRequest.withVelocity(INTAKE_POWER));
 			}
 			case FEED -> {
 				motorA.setControl(new VoltageOut(FEED_POWER));
-				motorB.setControl(new VoltageOut(FEED_POWER));
+//				motorB.setControl(new VoltageOut(FEED_POWER));
 			}
 			case REVERSE -> {
 				motorA.setControl(new VoltageOut(REVERSE_POWER));
-				motorB.setControl(new VoltageOut(REVERSE_POWER));
+//				motorB.setControl(new VoltageOut(REVERSE_POWER));
 			}
 		}
 	}

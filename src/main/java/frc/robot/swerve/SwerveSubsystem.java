@@ -28,7 +28,9 @@ import frc.robot.util.state_machines.StateMachine;
 import java.util.Map;
 
 public class SwerveSubsystem extends StateMachine<SwerveState> {
-  public static final double MaxSpeed = 4.75 * 0.75;
+  public static final double MaxSpeed = 4.75;
+  public static final double DRIVER_NORMAL_SPEED_PERCENT = 0.75;
+  public static final double DRIVER_FAST_SPEED_PERCENT = 0.90;
   private static final double maxAngularRate = Units.rotationsToRadians(4);
   private static final Rotation2d TELEOP_MAX_ANGULAR_RATE = Rotation2d.fromRotations(2);
 
@@ -89,6 +91,7 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
   private boolean vyOverrideActive = false;
   private double rawControllerXValue = 0.0;
   private double rawControllerYValue = 0.0;
+  private double driverSpeedPercent = DRIVER_NORMAL_SPEED_PERCENT;
   private double intakeSpeedMultiplier = 1.0;
 
   public ChassisSpeeds getRobotRelativeSpeeds() {
@@ -185,9 +188,9 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
 
     teleopSpeeds =
         new ChassisSpeeds(
-            -1.0 * mappedY * MaxSpeed * teleopSlowModePercent * intakeSpeedMultiplier,
-            mappedX * MaxSpeed * teleopSlowModePercent * intakeSpeedMultiplier,
-            rightX * TELEOP_MAX_ANGULAR_RATE.getRadians() * teleopSlowModePercent * intakeSpeedMultiplier);
+            -1.0 * mappedY * MaxSpeed * driverSpeedPercent * teleopSlowModePercent * intakeSpeedMultiplier,
+            mappedX * MaxSpeed * driverSpeedPercent * teleopSlowModePercent * intakeSpeedMultiplier,
+            rightX * TELEOP_MAX_ANGULAR_RATE.getRadians() * driverSpeedPercent * teleopSlowModePercent * intakeSpeedMultiplier);
 
     sendSwerveRequest();
   }
@@ -376,6 +379,10 @@ public class SwerveSubsystem extends StateMachine<SwerveState> {
    */
   public void setIntakeSpeedMultiplier(double multiplier) {
     intakeSpeedMultiplier = multiplier;
+  }
+
+  public void setDriverFastMode(boolean enabled) {
+    driverSpeedPercent = enabled ? DRIVER_FAST_SPEED_PERCENT : DRIVER_NORMAL_SPEED_PERCENT;
   }
 
   /** Restores full speed after intaking. */

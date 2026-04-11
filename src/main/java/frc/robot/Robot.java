@@ -105,6 +105,7 @@ public class Robot extends TimedRobot {
     private Translation2d activePassTarget;
     private static final double PASS_HEADING_TOLERANCE_DEG = 15.0;
     private boolean rtShootMode = true;
+    private boolean driveFastModeEnabled = false;
     private phaseTimer.Phase lastPhase = null;
     private boolean warningRumbleSent = false;
     // Rumble pattern: array of {duration, pause, duration, pause, ...} in seconds
@@ -379,6 +380,8 @@ public class Robot extends TimedRobot {
         var povDown = anyPressed(hardware.driverController.povDown(), coDriverController.povDown());
         var povLeft = anyPressed(hardware.driverController.povLeft(), coDriverController.povLeft());
         var povRight = anyPressed(hardware.driverController.povRight(), coDriverController.povRight());
+        var leftBumper = anyPressed(hardware.driverController.leftBumper(), coDriverController.leftBumper());
+        var rightBumper = anyPressed(hardware.driverController.rightBumper(), coDriverController.rightBumper());
         var leftTrigger = anyPressed(hardware.driverController.leftTrigger(0.1), coDriverController.leftTrigger(0.1));
         var rightTrigger = anyPressed(hardware.driverController.rightTrigger(0.1), coDriverController.rightTrigger(0.1));
 
@@ -431,33 +434,69 @@ public class Robot extends TimedRobot {
                 outpost.travelToOutpost()
         );
 
+        // Right Bumper (press): toggle fast drive mode.
+        rightBumper.onTrue(
+                Commands.runOnce(() -> {
+                    driveFastModeEnabled = !driveFastModeEnabled;
+                    swerve.setDriverFastMode(driveFastModeEnabled);
+                    if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/FastMode", driveFastModeEnabled);
+                })
+        );
+
         // Left Trigger (hold): Intake — deploy intake, run rollers + hopper, slow drivetrain 50%
+//        leftTrigger.whileTrue(
+//                edu.wpi.first.wpilibj2.command.Commands.startEnd(
+//                        () -> {
+//                            swerve.setIntakeSpeedMultiplier(1.25);
+//                            intakePosition.deploy();
+//                            intakeRoller.intake();
+//                            hopper.feed();
+//                        },
+//                        () -> {
+//                            swerve.setIntakeSpeedMultiplier(1.0);
+//                            intakePosition.retract();
+//                            intakeRoller.stop();
+//                            hopper.stop();
+//                        }
+//                )
+//        );
+//
+        //left trig roller do hold
         leftTrigger.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
-                            swerve.setIntakeSpeedMultiplier(1.25);
-                            intakePosition.delay();
+                            swerve.setIntakeSpeedMultiplier(0.75);
                             intakeRoller.intake();
                             hopper.feed();
                         },
                         () -> {
                             swerve.setIntakeSpeedMultiplier(1.0);
-                            intakePosition.retract();
                             intakeRoller.stop();
                             hopper.stop();
                         }
                 )
         );
 
+
+        //left bump intake do toggle
+
+
+        leftBumper.onTrue(new InstantCommand(intakePosition::toggle));
+
+
         // Y (hold): Manual shoot — spin flywheel + feed indexer and hopper
         y.whileTrue(
                 edu.wpi.first.wpilibj2.command.Commands.run(() -> {
                     swerve.setIntakeSpeedMultiplier(0.5);
+                    intakePosition.pulse();
+                    intakeRoller.intake();
                     flywheel.spinFlywheel(manualShootRpm);
                     indexer.feed();
                     hopper.feed();
                 }).finallyDo(() -> {
                     swerve.setIntakeSpeedMultiplier(1.0);
+                    intakePosition.stopPulseAndRestore();
+                    intakeRoller.stop();
                     flywheel.stop();
                     indexer.stop();
                     hopper.stop();
@@ -500,6 +539,7 @@ public class Robot extends TimedRobot {
                 edu.wpi.first.wpilibj2.command.Commands.startEnd(
                         () -> {
                             swerve.setIntakeSpeedMultiplier(0.25);
+                            intakePosition.pulse();
                             double robotX = localization.getPose().getX();
                             boolean isBlue = !FmsSubsystem.isRedAlliance();
                             boolean shooting = isBlue ? (robotX < 5.54) : (robotX >= 11.0);
@@ -522,6 +562,7 @@ public class Robot extends TimedRobot {
 
                                 updatePassTargets(isBlue);
                                 headingLock.enableForAlliance();
+                                intakeRoller.intake();
                                 hopper.pulse();
                                 if (ENABLE_DASHBOARD) SmartDashboard.putBoolean("Driver/PassingActive", true);
                             }
@@ -529,6 +570,7 @@ public class Robot extends TimedRobot {
                         () -> {
                             swerve.setIntakeSpeedMultiplier(1.0);
                             boolean wasShootMode = rtShootMode;
+                            intakePosition.stopPulseAndRestore();
 
                             if (wasShootMode) {
                                 turretLookup.disable();
@@ -556,6 +598,8 @@ public class Robot extends TimedRobot {
                             boolean shootMode = rtShootMode;
 
                             if (shootMode) {
+                                intakePosition.pulse();
+                                intakeRoller.intake();
                                 var driveInput = swerve.getControllerValues();
                                 boolean shootOnTheGoActive = driveInput.getNorm() > 0.05;
                                 if (shootOnTheGoActive) {
@@ -580,6 +624,8 @@ public class Robot extends TimedRobot {
                                 }
                             } else {
                                 boolean isBlue = !FmsSubsystem.isRedAlliance();
+                                intakePosition.pulse();
+                                intakeRoller.intake();
                                 headingLock.enableForAlliance();
                                 updatePassTargets(isBlue);
 
